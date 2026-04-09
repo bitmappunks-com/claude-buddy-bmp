@@ -1,0 +1,36 @@
+{
+  "name": "claude-buddy",
+  "version": "1.0.0",
+  "description": "Permanent coding companion for Claude Code — survives any update",
+  "type": "module",
+  "bin": {
+    "claude-buddy": "./cli/index.ts"
+  },
+  "scripts": {
+    "server": "bun run server/index.ts",
+    "hunt": "bun run cli/hunt.ts",
+    "install-buddy": "bun run cli/install.ts",
+    "show": "bun run cli/show.ts"
+  },
+  "files": [
+    "server/",
+    "cli/",
+    "skills/",
+    "hooks/",
+    "statusline/",
+    ".claude-plugin/"
+  ],
+  "keywords": [
+    "claude-code",
+    "buddy",
+    "companion",
+    "mcp",
+    "terminal-pet",
+    "tamagotchi"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@modelcontextprotocol/sdk": "^1.12.1"
+  }
+}

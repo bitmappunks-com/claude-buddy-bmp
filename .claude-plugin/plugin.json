@@ -1,0 +1,13 @@
+{
+  "name": "claude-buddy",
+  "version": "1.0.0",
+  "description": "Permanent coding companion for Claude Code — survives any update. MCP-based terminal pet with ASCII art, stats, reactions, and personality.",
+  "skills": ["buddy"],
+  "mcpServers": {
+    "claude-buddy": {
+      "type": "stdio",
+      "command": "bun",
+      "args": ["run", "server/index.ts"]
+    }
+  }
+}
