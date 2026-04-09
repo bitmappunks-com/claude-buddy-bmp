@@ -20,6 +20,28 @@ const STATE_DIR = join(homedir(), ".claude-buddy");
 
 console.log("\nclaude-buddy uninstall\n");
 
+// Stop popup reopen loop and close any running popup
+try {
+  const pidFile = join(STATE_DIR, "popup-reopen-pid");
+  const stopFlag = join(STATE_DIR, "popup-stop");
+  // Signal the reopen loop to stop
+  writeFileSync(stopFlag, "");
+  // Close any open popup
+  if (process.env.TMUX) {
+    const { execSync } = await import("child_process");
+    execSync("tmux display-popup -C 2>/dev/null", { stdio: "ignore" });
+  }
+  // Kill the reopen loop process
+  if (existsSync(pidFile)) {
+    const pid = parseInt(readFileSync(pidFile, "utf8").trim(), 10);
+    if (pid > 0) {
+      try { process.kill(pid); } catch { /* already dead */ }
+    }
+    rmSync(pidFile, { force: true });
+  }
+  ok("Popup stopped");
+} catch { /* not in tmux or no popup */ }
+
 // Remove MCP server from ~/.claude.json
 try {
   const claudeJsonPath = join(homedir(), ".claude.json");
@@ -45,7 +67,7 @@ try {
     changed = true;
   }
 
-  for (const hookType of ["PostToolUse", "Stop"] as const) {
+  for (const hookType of ["PostToolUse", "Stop", "SessionStart", "SessionEnd"] as const) {
     if (settings.hooks?.[hookType]) {
       const before = settings.hooks[hookType].length;
       settings.hooks[hookType] = settings.hooks[hookType].filter(

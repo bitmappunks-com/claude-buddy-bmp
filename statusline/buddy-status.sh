@@ -207,10 +207,21 @@ case "$HAT" in
   tinyduck)  HAT_LINE="  ,>" ;;
 esac
 
-# ─── Reaction bubble ─────────────────────────────────────────────────────────
+# ─── Reaction bubble (with TTL check) ────────────────────────────────────────
 BUBBLE=""
+REACTION_FILE="$HOME/.claude-buddy/reaction.json"
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
-    BUBBLE="\"${REACTION}\""
+    # Only show if reaction is fresh (< 20s old)
+    FRESH=0
+    if [ -f "$REACTION_FILE" ]; then
+        TS=$(jq -r '.timestamp // 0' "$REACTION_FILE" 2>/dev/null || echo 0)
+        if [ "$TS" != "0" ]; then
+            NOW=$(date +%s)
+            AGE=$(( NOW - TS / 1000 ))
+            [ "$AGE" -lt 20 ] && FRESH=1
+        fi
+    fi
+    [ "$FRESH" -eq 1 ] && BUBBLE="\"${REACTION}\""
 fi
 
 # ─── Build art lines ─────────────────────────────────────────────────────────
