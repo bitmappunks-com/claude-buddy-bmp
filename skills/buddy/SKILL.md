@@ -1,7 +1,7 @@
 ---
 name: buddy
 description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
-argument-hint: "[show|pet|off|on|stats|help|rename <name>|personality <text>|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]]"
+argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]]"
 allowed-tools: mcp__claude_buddy__*
 ---
 
@@ -23,6 +23,12 @@ Based on `$ARGUMENTS`:
 | `on` | Call `buddy_unmute` |
 | `rename <name>` | Call `buddy_rename` with the given name |
 | `personality <text>` | Call `buddy_set_personality` with the given text |
+| `summon` | Call `buddy_summon` with no args — picks a random saved buddy |
+| `summon <slot>` | Call `buddy_summon` with the given slot name |
+| `save [slot]` | Call `buddy_save` with optional slot name |
+| `list` | Call `buddy_list` |
+| `dismiss <slot>` | Call `buddy_dismiss` with the slot name |
+| `pick` | Tell user to run `! bun run pick` from the claude-buddy directory (launches interactive TUI) |
 | `frequency` | Call `buddy_frequency` with no args (show current) |
 | `frequency <seconds>` | Call `buddy_frequency` with cooldown=seconds |
 | `style` | Call `buddy_style` with no args (show current) |

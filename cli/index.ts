@@ -6,7 +6,8 @@
  *   npx claude-buddy              Interactive install
  *   npx claude-buddy install      Install MCP + skill + hooks + statusline
  *   npx claude-buddy show         Show current buddy
- *   npx claude-buddy hunt         Search for a specific buddy
+ *   npx claude-buddy pick         Interactive two-pane buddy picker (saved + search)
+ *   npx claude-buddy hunt         Search for a specific buddy (non-interactive)
  *   npx claude-buddy uninstall    Remove all integrations
  *   npx claude-buddy verify       Verify what buddy your ID produces
  */
@@ -20,6 +21,9 @@ switch (command) {
     break;
   case "show":
     await import("./show.ts");
+    break;
+  case "pick":
+    await import("./pick.ts");
     break;
   case "hunt":
     await import("./hunt.ts");
@@ -68,7 +72,8 @@ Setup:
 
 Buddy:
   show              Display your current buddy
-  hunt              Search for a specific buddy (species, rarity, stats)
+  pick              Interactive two-pane buddy picker (browse saved + search)
+  hunt              Search for a specific buddy (non-interactive)
   verify            Verify what buddy your current ID produces
 
 Diagnostics:
@@ -84,6 +89,11 @@ In Claude Code:
   /buddy on         Unmute reactions
   /buddy rename     Rename companion (1-14 chars)
   /buddy personality  Set custom personality text
+  /buddy summon     Summon a saved buddy (omit slot for random)
+  /buddy save       Save current buddy to a named slot
+  /buddy list       List all saved buddies
+  /buddy dismiss    Remove a saved buddy slot
+  /buddy pick       Launch interactive TUI picker (! bun run pick)
   /buddy frequency  Show or set comment cooldown (tmux only)
   /buddy style      Show or set bubble style (tmux only)
   /buddy position   Show or set bubble position (tmux only)

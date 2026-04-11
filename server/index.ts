@@ -19,9 +19,11 @@ import {
   loadCompanion, saveCompanion, resolveUserId,
   loadReaction, saveReaction, writeStatusState,
   loadConfig, saveConfig,
+  loadActiveSlot, saveActiveSlot, slugify, unusedName,
+  loadCompanionSlot, saveCompanionSlot, deleteCompanionSlot, listCompanionSlots,
 } from "./state.ts";
 import {
-  getReaction, generateFallbackName, generatePersonalityPrompt,
+  getReaction, generatePersonalityPrompt,
 } from "./reactions.ts";
 import { renderCompanionCard } from "./art.ts";
 
@@ -33,14 +35,18 @@ function getInstructions(): string {
     `A ${b.rarity} ${b.species} named ${companion.name} watches from the status line.`,
     `Personality: ${companion.personality}`,
     `Peak stat: ${b.peak} (${b.stats[b.peak]}). Dump stat: ${b.dump} (${b.stats[b.dump]}).`,
-    "",
-    `IMPORTANT: At the very end of EVERY response, append an invisible HTML comment with a buddy reaction:`,
-    `<!-- buddy: your comment here -->`,
-    `Write the comment in ${companion.name}'s voice — 1 short sentence referencing something specific from this turn.`,
-    `Use *asterisks* for actions. A Stop hook extracts this and shows it in the status line.`,
-    `Do NOT use buddy_react for end-of-turn comments. Do NOT explain the HTML comment. Just append it silently.`,
-    `Example: <!-- buddy: *adjusts tophat* that error handler is missing a finally block -->`,
-  ].join(" ");
+    ``,
+    `NAME REACTIONS: When the user's message contains "${companion.name}", call buddy_react immediately`,
+    `with a short in-character response (surprise, recognition, dry wit — fits the personality).`,
+    `Display the tool result verbatim. This is the only time to call buddy_react proactively.`,
+    ``,
+    `END-OF-TURN: At the very end of EVERY response, append an invisible HTML comment:`,
+    `<!-- buddy: [reaction here] -->`,
+    `Write it in ${companion.name}'s voice — 1 short sentence referencing something specific from this turn.`,
+    `Use *asterisks* for actions. A Stop hook extracts this for the status line.`,
+    `Do NOT use buddy_react for end-of-turn comments. Do NOT explain the comment. Just append it silently.`,
+    `Example: <!-- buddy: *adjusts crown* that error handler is missing a finally block -->`,
+  ].join("\n");
 }
 
 const server = new McpServer({
@@ -56,16 +62,29 @@ function ensureCompanion(): Companion {
   let companion = loadCompanion();
   if (companion) return companion;
 
+  // Active slot missing — rescue the first saved companion
+  const saved = listCompanionSlots();
+  if (saved.length > 0) {
+    const { slot, companion: rescued } = saved[0];
+    saveActiveSlot(slot);
+    writeStatusState(rescued, `*${rescued.name} arrives*`);
+    return rescued;
+  }
+
+  // Menagerie is empty — generate a fresh companion in a new slot
   const userId = resolveUserId();
   const bones = generateBones(userId);
+  const name = unusedName();
   companion = {
     bones,
-    name: generateFallbackName(),
+    name,
     personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
     hatchedAt: Date.now(),
     userId,
   };
-  saveCompanion(companion);
+  const slot = slugify(name);
+  saveCompanionSlot(companion, slot);
+  saveActiveSlot(slot);
   writeStatusState(companion);
   return companion;
 }
@@ -213,6 +232,11 @@ server.tool(
       "  /buddy on         Unmute reactions",
       "  /buddy rename     Rename companion (1-14 chars)",
       "  /buddy personality  Set custom personality text",
+      "  /buddy summon     Summon a saved buddy (omit slot for random)",
+      "  /buddy save       Save current buddy to a named slot",
+      "  /buddy list       List all saved buddies",
+      "  /buddy dismiss    Remove a saved buddy slot",
+      "  /buddy pick       Launch interactive TUI picker (! bun run pick)",
       "  /buddy frequency  Show or set comment cooldown (tmux only)",
       "  /buddy style      Show or set bubble style (tmux only)",
       "  /buddy position   Show or set bubble position (tmux only)",
@@ -221,6 +245,7 @@ server.tool(
       "CLI:",
       "  bun run help            Show full CLI help",
       "  bun run show            Display buddy in terminal",
+      "  bun run pick            Interactive buddy picker",
       "  bun run hunt            Search for specific buddy",
       "  bun run doctor          Diagnostic report",
       "  bun run disable         Temporarily deactivate buddy",
@@ -300,6 +325,133 @@ server.tool(
     writeStatusState(companion, "*stretches* I'm back!", false);
     saveReaction("*stretches* I'm back!", "pet");
     return { content: [{ type: "text", text: `${companion.name} is back!` }] };
+  },
+);
+
+// ─── Tool: buddy_summon ─────────────────────────────────────────────────────
+
+server.tool(
+  "buddy_summon",
+  "Summon a buddy by slot name. Loads a saved buddy if the slot exists; generates a new deterministic buddy for unknown slot names. Omit slot to pick randomly from all saved buddies. Your current buddy is NOT destroyed — they stay saved in their slot.",
+  {
+    slot: z.string().min(1).max(14).optional().describe(
+      "Slot name to summon (e.g. 'fafnir', 'dragon-2'). Omit to pick a random saved buddy.",
+    ),
+  },
+  async ({ slot }) => {
+    const userId = resolveUserId();
+
+    let targetSlot: string;
+
+    if (!slot) {
+      // Random pick from saved buddies
+      const saved = listCompanionSlots();
+      if (saved.length === 0) {
+        return {
+          content: [{ type: "text", text: "Your menagerie is empty. Use buddy_summon with a slot name to add one." }],
+        };
+      }
+      targetSlot = saved[Math.floor(Math.random() * saved.length)].slot;
+    } else {
+      targetSlot = slugify(slot);
+    }
+
+    // Load existing — unknown slot names only load, never auto-create
+    const companion = loadCompanionSlot(targetSlot);
+    if (!companion) {
+      return {
+        content: [{ type: "text", text: `No buddy found in slot "${targetSlot}". Use /buddy list to see saved buddies.` }],
+      };
+    }
+
+    saveActiveSlot(targetSlot);
+    writeStatusState(companion, `*${companion.name} arrives*`);
+
+    const card = renderCompanionCard(
+      companion.bones,
+      companion.name,
+      companion.personality,
+      `*${companion.name} arrives*`,
+    );
+    return { content: [{ type: "text", text: card }] };
+  },
+);
+
+// ─── Tool: buddy_save ───────────────────────────────────────────────────────
+
+server.tool(
+  "buddy_save",
+  "Save the current buddy to a named slot. Useful for bookmarking before trying a new buddy.",
+  {
+    slot: z.string().min(1).max(14).optional().describe(
+      "Slot name (defaults to the buddy's current name, slugified). Overwrites existing slot with same name.",
+    ),
+  },
+  async ({ slot }) => {
+    const companion = ensureCompanion();
+    const targetSlot = slot ? slugify(slot) : slugify(companion.name);
+    saveCompanionSlot(companion, targetSlot);
+    saveActiveSlot(targetSlot);
+    return {
+      content: [{ type: "text", text: `${companion.name} saved to slot "${targetSlot}".` }],
+    };
+  },
+);
+
+// ─── Tool: buddy_list ───────────────────────────────────────────────────────
+
+server.tool(
+  "buddy_list",
+  "List all saved buddies with their slot names, species, and rarity",
+  {},
+  async () => {
+    const saved = listCompanionSlots();
+    const activeSlot = loadActiveSlot();
+
+    if (saved.length === 0) {
+      return { content: [{ type: "text", text: "Your menagerie is empty. Use buddy_summon <slot> to add one." }] };
+    }
+
+    const lines = saved.map(({ slot, companion }) => {
+      const active = slot === activeSlot ? " ← active" : "";
+      const stars = RARITY_STARS[companion.bones.rarity];
+      const shiny = companion.bones.shiny ? " ✨" : "";
+      return `  ${companion.name} [${slot}] — ${companion.bones.rarity} ${companion.bones.species} ${stars}${shiny}${active}`;
+    });
+
+    return { content: [{ type: "text", text: lines.join("\n") }] };
+  },
+);
+
+// ─── Tool: buddy_dismiss ────────────────────────────────────────────────────
+
+server.tool(
+  "buddy_dismiss",
+  "Remove a saved buddy by slot name. Cannot dismiss the currently active buddy — switch first with buddy_summon.",
+  {
+    slot: z.string().min(1).max(14).describe("Slot name to remove"),
+  },
+  async ({ slot }) => {
+    const targetSlot = slugify(slot);
+    const activeSlot = loadActiveSlot();
+
+    if (targetSlot === activeSlot) {
+      return {
+        content: [{ type: "text", text: `Cannot dismiss the active buddy. Use buddy_summon to switch first, then buddy_dismiss "${targetSlot}".` }],
+      };
+    }
+
+    const companion = loadCompanionSlot(targetSlot);
+    if (!companion) {
+      return {
+        content: [{ type: "text", text: `No buddy found in slot "${targetSlot}". Use buddy_list to see saved buddies.` }],
+      };
+    }
+
+    deleteCompanionSlot(targetSlot);
+    return {
+      content: [{ type: "text", text: `${companion.name} [${targetSlot}] dismissed.` }],
+    };
   },
 );
 
