@@ -19,7 +19,8 @@
         "disable": "bun run cli/disable.ts",
         "enable": "bun run cli/install.ts",
         "uninstall": "bun run cli/uninstall.ts",
-        "help": "bun run cli/index.ts help"
+        "help": "bun run cli/index.ts help",
+        "test": "bun test"
     },
     "files": [
         "server/",
