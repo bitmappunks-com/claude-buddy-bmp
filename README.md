@@ -24,19 +24,29 @@ I opened Claude Code that morning, typed `/buddy`, and got `Unknown skill: buddy
 
 ## What You Get
 
-| Feature | Original `/buddy` | **claude-buddy** |
-|---------|-------------------|------------------|
-| Animated ASCII art (18 species) | Binary-internal | MCP + Status Line |
-| Species-aware reactions | API endpoint (removed) | Stop hook + system prompt |
-| Speech bubbles with context | Sidebar component | Status line bubble |
-| Rarity colors (exact RGB match) | React/Ink theme | 24-bit ANSI true color |
-| Survives Claude Code updates | No | **Yes** |
-| Works after feature removal | No | **Yes** |
-| Open source / customizable | No | **Yes** |
+| Feature                         | Original `/buddy`      | **claude-buddy**          |
+| ------------------------------- | ---------------------- | ------------------------- |
+| Animated ASCII art (18 species) | Binary-internal        | MCP + Status Line         |
+| Species-aware reactions         | API endpoint (removed) | Stop hook + system prompt |
+| Speech bubbles with context     | Sidebar component      | Status line bubble        |
+| Rarity colors (exact RGB match) | React/Ink theme        | 24-bit ANSI true color    |
+| Survives Claude Code updates    | No                     | **Yes**                   |
+| Works after feature removal     | No                     | **Yes**                   |
+| Open source / customizable      | No                     | **Yes**                   |
 
 ## Quick Start
 
 > **Status: v0.1.0 (MVP)** — fully functional on Linux, may have terminal-specific quirks on macOS/other platforms. If something looks broken: `bun run doctor` and [open an issue](https://github.com/1270011/claude-buddy/issues/new).
+
+### Option A: Plugin Install (Recommended)
+
+```bash
+claude plugin install github:1270011/claude-buddy
+```
+
+Restart Claude Code, then type `/buddy`.
+
+### Option B: Manual Install
 
 ```bash
 # Clone
@@ -68,24 +78,24 @@ Then you can use `claude-buddy <command>` from anywhere instead of `bun run <com
 
 ### What the installer does
 
-| Step | Target file | What it configures |
-|------|-------------|-------------------|
-| MCP server | `~/.claude.json` | Buddy intelligence — tools + companion prompt |
-| Skill | `~/.claude/skills/buddy/` | `/buddy` slash command |
-| Status line | `~/.claude/settings.json` | Animated buddy with speech bubble |
-| PostToolUse hook | `~/.claude/settings.json` | Error and test failure detection |
-| Stop hook | `~/.claude/settings.json` | Buddy comment extraction |
-| Permissions | `~/.claude/settings.json` | Allow MCP tools |
+| Step             | Target file               | What it configures                            |
+| ---------------- | ------------------------- | --------------------------------------------- |
+| MCP server       | `~/.claude.json`          | Buddy intelligence — tools + companion prompt |
+| Skill            | `~/.claude/skills/buddy/` | `/buddy` slash command                        |
+| Status line      | `~/.claude/settings.json` | Animated buddy with speech bubble             |
+| PostToolUse hook | `~/.claude/settings.json` | Error and test failure detection              |
+| Stop hook        | `~/.claude/settings.json` | Buddy comment extraction                      |
+| Permissions      | `~/.claude/settings.json` | Allow MCP tools                               |
 
 ## Requirements
 
-| Requirement | Install |
-|-------------|---------|
-| **[Bun](https://bun.sh)** | `curl -fsSL https://bun.sh/install \| bash` |
-| **Claude Code** v2.1.80+ | Any version with MCP support |
-| **jq** | Auto-installed, or: `apt install jq` / `brew install jq` |
+| Requirement               | Install                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| **[Bun](https://bun.sh)** | `curl -fsSL https://bun.sh/install \| bash`              |
+| **Claude Code** v2.1.80+  | Any version with MCP support                             |
+| **jq**                    | Auto-installed, or: `apt install jq` / `brew install jq` |
 
-> **Will I get the same buddy I had?** Yes. claude-buddy uses the exact same algorithm as the original (wyhash + mulberry32, same salt, same identity resolution). If your `~/.claude.json` still has your `accountUuid`, you'll get the identical species, rarity, stats, and cosmetics. Bun is required for correct wyhash computation — without it, the fallback hash produces different results.
+> **Will I get the same buddy I had?** Yes. claude-buddy uses the exact same algorithm as the original (wyhash + mulberry32, same salt, same identity resolution). If your `~/.claude.json` still has your `accountUuid`, you'll get the identical species, rarity, stats, and cosmetics. The pure JS wyhash fallback matches Bun.hash exactly, so you'll get the same buddy on both runtimes.
 
 ## How It Works
 
@@ -141,13 +151,13 @@ Five integration points, zero binary dependencies:
 
 ## Rarities
 
-| Rarity | Chance | Stars | Color |
-|--------|--------|-------|-------|
-| Common | 60% | ★ | Gray |
-| Uncommon | 25% | ★★ | Green |
-| Rare | 10% | ★★★ | Blue |
-| Epic | 4% | ★★★★ | Purple |
-| Legendary | 1% | ★★★★★ | Gold |
+| Rarity    | Chance | Stars | Color  |
+| --------- | ------ | ----- | ------ |
+| Common    | 60%    | ★     | Gray   |
+| Uncommon  | 25%    | ★★    | Green  |
+| Rare      | 10%    | ★★★   | Blue   |
+| Epic      | 4%     | ★★★★  | Purple |
+| Legendary | 1%     | ★★★★★ | Gold   |
 
 Colors use 24-bit true color matching Claude Code's dark theme exactly.
 
@@ -167,29 +177,29 @@ The mechanism is invisible: Claude appends a hidden HTML comment (`<!-- buddy: .
 
 ### In Claude Code
 
-| Command | Description |
-|---------|-------------|
-| `/buddy` | Show companion card with ASCII art and stats |
-| `/buddy pet` | Pet your companion |
-| `/buddy stats` | Stats-only card |
-| `/buddy off` | Mute reactions |
-| `/buddy on` | Unmute |
-| `/buddy rename <name>` | Rename (1-14 chars) |
-| `/buddy personality <text>` | Set custom personality |
-| `/buddy frequency [seconds]` | Show or set comment cooldown |
-| `/buddy style [classic\|round]` | Show or set bubble border style |
-| `/buddy position [top\|left]` | Show or set bubble position |
-| `/buddy rarity [on\|off]` | Show or hide stars + rarity line |
+| Command                         | Description                                  |
+| ------------------------------- | -------------------------------------------- |
+| `/buddy`                        | Show companion card with ASCII art and stats |
+| `/buddy pet`                    | Pet your companion                           |
+| `/buddy stats`                  | Stats-only card                              |
+| `/buddy off`                    | Mute reactions                               |
+| `/buddy on`                     | Unmute                                       |
+| `/buddy rename <name>`          | Rename (1-14 chars)                          |
+| `/buddy personality <text>`     | Set custom personality                       |
+| `/buddy frequency [seconds]`    | Show or set comment cooldown                 |
+| `/buddy style [classic\|round]` | Show or set bubble border style              |
+| `/buddy position [top\|left]`   | Show or set bubble position                  |
+| `/buddy rarity [on\|off]`       | Show or hide stars + rarity line             |
 
 ### CLI
 
-| Command | Description |
-|---------|-------------|
-| `bun run install-buddy` | Automated setup |
-| `bun run show` | Show buddy in terminal |
-| `bun run hunt` | Interactive search for specific species/rarity/stats |
-| `bun run cli/verify.ts` | Verify what buddy your account produces |
-| `bun run cli/uninstall.ts` | Clean removal |
+| Command                    | Description                                          |
+| -------------------------- | ---------------------------------------------------- |
+| `bun run install-buddy`    | Automated setup                                      |
+| `bun run show`             | Show buddy in terminal                               |
+| `bun run hunt`             | Interactive search for specific species/rarity/stats |
+| `bun run cli/verify.ts`    | Verify what buddy your account produces              |
+| `bun run cli/uninstall.ts` | Clean removal                                        |
 
 ## Buddy Hunt
 
@@ -232,11 +242,11 @@ claude-buddy/
 
 ## Why MCP Instead of Binary Patching?
 
-| Approach | Survives updates | Animated | Comments | Risk |
-|----------|-----------------|----------|----------|------|
-| Binary patching | No | No | No | Breaks on update |
-| Pin old version | No new features | Yes | Yes | No security fixes |
-| **claude-buddy** | **Yes** | **Yes** | **Yes** | **None** |
+| Approach         | Survives updates | Animated | Comments | Risk              |
+| ---------------- | ---------------- | -------- | -------- | ----------------- |
+| Binary patching  | No               | No       | No       | Breaks on update  |
+| Pin old version  | No new features  | Yes      | Yes      | No security fixes |
+| **claude-buddy** | **Yes**          | **Yes**  | **Yes**  | **None**          |
 
 MCP is an industry standard protocol. Skills are Markdown files. Hooks and status line are shell scripts. Nothing depends on Claude Code's binary internals. When Claude Code updates, your buddy stays.
 
@@ -289,11 +299,11 @@ When running inside tmux, buddy appears as a floating popup overlay in the botto
 
 ### Requirements
 
-| tmux version | Support |
-|--------------|---------|
-| **3.4+** | Full support (borderless, positioned anchors) |
-| **3.2 -- 3.3** | Supported with border, absolute positioning |
-| **< 3.2** | Falls back to status line mode |
+| tmux version   | Support                                       |
+| -------------- | --------------------------------------------- |
+| **3.4+**       | Full support (borderless, positioned anchors) |
+| **3.2 -- 3.3** | Supported with border, absolute positioning   |
+| **< 3.2**      | Falls back to status line mode                |
 
 ### Recommended tmux config
 
