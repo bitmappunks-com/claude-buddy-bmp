@@ -396,31 +396,11 @@ The popup is modal. To scroll:
 
 Thank you to everyone who helped bring buddies back to life.
 
-<table>
-<tr>
-<td align="center">
-<a href="https://github.com/doctor-ew">
-<img src="https://github.com/doctor-ew.png" width="80" style="border-radius:50%" alt="doctor-ew" /><br>
-<sub><b>doctor-ew</b></sub>
-</a><br>
-<sub>multi-buddy menagerie</sub>
-</td>
-<td align="center">
-<a href="https://github.com/gzenz">
-<img src="https://github.com/gzenz.png" width="80" style="border-radius:50%" alt="gzenz" /><br>
-<sub><b>gzenz</b></sub>
-</a><br>
-<sub>tmux popup mode</sub>
-</td>
-<td align="center">
-<a href="https://github.com/birkdev">
-<img src="https://github.com/birkdev.png" width="80" style="border-radius:50%" alt="birkdev" /><br>
-<sub><b>birkdev</b></sub>
-</a><br>
-<sub>PostToolUse hook fix</sub>
-</td>
-</tr>
-</table>
+<a href="https://github.com/1270011/claude-buddy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=1270011/claude-buddy" alt="Contributors" />
+</a>
+
+<sub>Automatically generated from the [contributors graph](https://github.com/1270011/claude-buddy/graphs/contributors) via [contrib.rocks](https://contrib.rocks).</sub>
 
 <br>
 
