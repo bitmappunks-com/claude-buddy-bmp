@@ -45,7 +45,33 @@ const YL = "\x1b[33m";
 const GN = "\x1b[32m";
 
 function stripAnsi(s: string): string { return s.replace(/\x1b\[[^m]*m/g, ""); }
-function vlen(s: string): number { return [...stripAnsi(s)].length; }
+
+// Wide characters: emojis, some Unicode symbols take 2 display columns
+function charWidth(cp: number): number {
+  // Emoji modifiers, variation selectors, ZWJ
+  if (cp >= 0xFE00 && cp <= 0xFE0F) return 0;
+  if (cp === 0x200D) return 0;
+  // Common wide ranges: CJK, emoji, fullwidth, braille, box-drawing stars etc.
+  if (cp >= 0x1F000) return 2;  // Most emoji (sparkles ✨ = U+2728 is below this)
+  if (cp === 0x2728) return 2;  // ✨ Sparkles
+  if (cp >= 0x2600 && cp <= 0x27BF) return 1;  // Misc symbols (★ ☆ etc.) — typically 1 col
+  if (cp >= 0x2500 && cp <= 0x257F) return 1;  // Box drawing
+  if (cp >= 0x2580 && cp <= 0x259F) return 1;  // Block elements (█░)
+  if (cp >= 0x3000 && cp <= 0x9FFF) return 2;  // CJK
+  if (cp >= 0xF900 && cp <= 0xFAFF) return 2;  // CJK compat
+  if (cp >= 0xFF01 && cp <= 0xFF60) return 2;  // Fullwidth
+  return 1;
+}
+
+function vlen(s: string): number {
+  const clean = stripAnsi(s);
+  let w = 0;
+  for (const ch of clean) {
+    w += charWidth(ch.codePointAt(0)!);
+  }
+  return w;
+}
+
 function rpad(s: string, w: number): string {
   const v = vlen(s);
   return v < w ? s + " ".repeat(w - v) : s;
@@ -134,7 +160,6 @@ function savedPane(s: State): string[] {
   }
 
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
-  lines.push(`  ${GR}↑↓ navigate  enter summon  r random  s search  q quit${N}`);
   return lines;
 }
 
@@ -156,8 +181,6 @@ function criteriaPane(s: State): string[] {
   }
 
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
-  lines.push(`  ${GR}↑↓ field  ←→ value  enter search${N}`);
-  lines.push(`  ${GR}esc back to saved${N}`);
   if (s.searchStatus) lines.push(`  ${YL}${s.searchStatus}${N}`);
   return lines;
 }
@@ -189,7 +212,6 @@ function resultsPane(s: State): string[] {
   }
 
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
-  lines.push(`  ${GR}↑↓ navigate  enter name+save  esc back${N}`);
   return lines;
 }
 
@@ -201,9 +223,7 @@ function namingPane(s: State): string[] {
   if (b) lines.push(`  ${clr}${b.rarity} ${b.species}${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
   lines.push(`  ${B}Name:${N} ${s.nameInput}${YL}▌${N}`);
-  lines.push(`  ${GR}(type a name, or just enter for random)${N}`);
-  lines.push("");
-  lines.push(`  ${GR}enter save  esc cancel${N}`);
+  lines.push(`  ${GR}(type a name, or enter for random)${N}`);
   return lines;
 }
 
@@ -229,7 +249,10 @@ function previewPane(s: State): string[] {
   }
 
   if (!c) return [`  ${GR}no preview${N}`];
-  return renderCompanionCard(c.bones, c.name, c.personality).split("\n");
+  // Calculate available width for the right pane (total cols - left pane - separator)
+  const cols = Math.max(80, process.stdout.columns || 80);
+  const rightW = cols - LEFT_W - 3;
+  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW).split("\n");
 }
 
 // ─── Screen render ────────────────────────────────────────────────────────────
@@ -259,8 +282,13 @@ function drawScreen(s: State): void {
     out += l + GR + "│" + N + " " + r + "\n";
   }
 
-  // Footer
-  out += GR + "─".repeat(cols) + N;
+  // Footer — mode-specific help
+  const helpText =
+    s.mode === "saved"    ? "↑↓ navigate  enter summon  r random  s search  q quit" :
+    s.mode === "criteria" ? "↑↓ field  ←→ value  enter search  esc back" :
+    s.mode === "results"  ? "↑↓ navigate  enter name+save  esc back  q quit" :
+    s.mode === "naming"   ? "type name  enter save  esc cancel" : "";
+  out += `${GR}─${N} ${GR}${helpText}${N} ${GR}${"─".repeat(Math.max(0, cols - helpText.length - 4))}${N}`;
 
   // Message overlay on last line
   if (s.message) {
