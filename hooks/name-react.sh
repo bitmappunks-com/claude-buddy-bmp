@@ -5,6 +5,9 @@
 
 STATE_DIR="$HOME/.claude-buddy"
 STATUS_FILE="$STATE_DIR/status.json"
+# Session ID: sanitized tmux pane number, or "default" outside tmux
+SID="${TMUX_PANE#%}"
+SID="${SID:-default}"
 
 [ -f "$STATUS_FILE" ] || exit 0
 
@@ -102,8 +105,8 @@ mkdir -p "$STATE_DIR"
 TMP=$(mktemp)
 jq --arg r "$REACTION" '.reaction = $r' "$STATUS_FILE" > "$TMP" 2>/dev/null && mv "$TMP" "$STATUS_FILE"
 
-cat > "$STATE_DIR/reaction.json" <<EOJSON
-{"reaction":"$REACTION","timestamp":$(date +%s%3N),"reason":"name"}
-EOJSON
+jq -n --arg r "$REACTION" --arg ts "$(date +%s)000" \
+  '{reaction: $r, timestamp: ($ts | tonumber), reason: "name"}' \
+  > "$STATE_DIR/reaction.$SID.json"
 
 exit 0

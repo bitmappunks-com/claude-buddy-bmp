@@ -15,11 +15,12 @@ CONFIG_FILE="$STATE_DIR/config.json"
 
 [ -f "$STATUS_FILE" ] || exit 0
 
-# Read cooldown from config (default 30s)
+# Read cooldown from config (default 30s, 0 = disabled)
 COOLDOWN=30
 if [ -f "$CONFIG_FILE" ]; then
   _cd=$(jq -r '.commentCooldown // 30' "$CONFIG_FILE" 2>/dev/null || echo 30)
-  [ "$_cd" -gt 0 ] 2>/dev/null && COOLDOWN=$_cd
+  # Accept any non-negative integer (including 0 to disable cooldown)
+  [[ "$_cd" =~ ^[0-9]+$ ]] && COOLDOWN=$_cd
 fi
 
 INPUT=$(cat)
