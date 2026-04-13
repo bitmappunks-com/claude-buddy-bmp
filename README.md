@@ -395,13 +395,13 @@ The popup is modal. To scroll:
 
 ## 🗺️ Roadmap
 
-- [x] **Multi-buddy support** — menagerie system with named slots, interactive TUI picker
-- [x] **tmux popup mode** — floating overlay via `tmux display-popup`
+- [x] **Multi-buddy support** — menagerie system with named slots, interactive TUI picker 💜[@doctor-ew](https://github.com/doctor-ew)💜
+- [x] **tmux popup mode** — floating overlay via `tmux display-popup` 💜[@gzenz](https://github.com/gzenz)💜
 - [ ] **Leveling system** — XP from coding sessions, unlockable reactions and upgrades
 - [ ] **Buddy pair-programming** — active help during sessions, pattern detection
 - [ ] **Cross-session memory** — remembers past projects and earlier conversations
 - [ ] **Mood system** — shifts based on code quality, tests, time of day
-- [ ] **Achievement badges** — "1000 lines reviewed", "week streak", etc.
+- [x] **Achievement badges** — "1000 lines reviewed", "week streak", etc. 💜[ndcorder](https://github.com/ndcorder)💜
 - [ ] **Light theme colors** — auto-detect and match light theme RGB
 - [ ] **New species + community art** — submit your own designs
 - [ ] **`npx claude-buddy`** — one-command install without cloning
