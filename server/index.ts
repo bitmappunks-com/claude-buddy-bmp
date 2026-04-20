@@ -331,6 +331,9 @@ server.tool(
       "  /buddy style      Show or set bubble style (tmux only)",
       "  /buddy position   Show or set bubble position (tmux only)",
       "  /buddy rarity     Show or hide rarity stars (tmux only)",
+      "  /buddy width      Set bubble text width in chars (10-60, tmux only)",
+      "  /buddy margin     Set right-side margin in chars (0-20, tmux only)",
+      "  /buddy rainbow    Show or set shiny gradient colors (hex, e.g. #ff0000)",
       "  /buddy statusline Enable or disable buddy in the status line",
       "",
       "CLI:",
@@ -400,33 +403,67 @@ server.tool(
       .boolean()
       .optional()
       .describe("Show or hide the stars + rarity line in the status line"),
+    width: z
+      .number()
+      .int()
+      .min(10)
+      .max(60)
+      .optional()
+      .describe("Bubble inner text width in characters (10–60, default 28)"),
+    margin: z
+      .number()
+      .int()
+      .min(0)
+      .max(20)
+      .optional()
+      .describe("Right-side margin between buddy and terminal edge (0–20, default 3)"),
+    rainbow: z
+      .array(z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color like #ff0000"))
+      .min(1)
+      .max(16)
+      .optional()
+      .describe(
+        "Custom rainbow gradient for shiny buddies — array of 1–16 hex colors (e.g. [\"#ff0000\",\"#00ff00\"]). Omit to reset to default ROYGBIV.",
+      ),
   },
-  async ({ style, position, showRarity }) => {
+  async ({ style, position, showRarity, width, margin, rainbow }) => {
     if (
       style === undefined &&
       position === undefined &&
-      showRarity === undefined
+      showRarity === undefined &&
+      width === undefined &&
+      margin === undefined &&
+      rainbow === undefined
     ) {
       const cfg = loadConfig();
+      const rainbowDisplay = cfg.rainbowColors
+        ? cfg.rainbowColors.join(", ")
+        : "default (ROYGBIV)";
       return {
         content: [
           {
             type: "text",
-            text: `Bubble style: ${cfg.bubbleStyle}\nBubble position: ${cfg.bubblePosition}\nShow rarity: ${cfg.showRarity}\nUse /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off> to change.`,
+            text: `Bubble style: ${cfg.bubbleStyle}\nBubble position: ${cfg.bubblePosition}\nShow rarity: ${cfg.showRarity}\nBubble width: ${cfg.bubbleWidth}\nBubble margin: ${cfg.bubbleMargin}\nShiny rainbow: ${rainbowDisplay}\nUse /buddy style <classic|round>, /buddy position <top|left>, /buddy rarity <on|off>, /buddy width <10-60>, /buddy margin <0-20>, /buddy rainbow [<#hex>...] to change.`,
           },
         ],
       };
     }
-    const updates: Record<string, string | boolean> = {};
+    const updates: Partial<import("./state.ts").BuddyConfig> = {};
     if (style !== undefined) updates.bubbleStyle = style;
     if (position !== undefined) updates.bubblePosition = position;
     if (showRarity !== undefined) updates.showRarity = showRarity;
+    if (width !== undefined) updates.bubbleWidth = width;
+    if (margin !== undefined) updates.bubbleMargin = margin;
+    if (rainbow !== undefined) updates.rainbowColors = rainbow.length > 0 ? rainbow : undefined;
     const cfg = saveConfig(updates);
+    const rainbowDisplay = cfg.rainbowColors
+      ? cfg.rainbowColors.join(", ")
+      : "default (ROYGBIV)";
     return {
       content: [
         {
           type: "text",
-          text: `Updated: style=${cfg.bubbleStyle}, position=${cfg.bubblePosition}, showRarity=${cfg.showRarity}\nRestart Claude Code for changes to take effect.`,
+          text: `Updated: style=${cfg.bubbleStyle}, position=${cfg.bubblePosition}, showRarity=${cfg.showRarity}, width=${cfg.bubbleWidth}, margin=${cfg.bubbleMargin}, rainbow=${rainbowDisplay}\nRestart Claude Code for changes to take effect.`,
         },
       ],
     };

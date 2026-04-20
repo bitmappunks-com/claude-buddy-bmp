@@ -1,7 +1,7 @@
 ---
 name: buddy
 description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
-argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|statusline [on|off]|uninstall]"
+argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
 allowed-tools: mcp__claude_buddy__*, Bash
 ---
 
@@ -62,6 +62,9 @@ Based on `$ARGUMENTS`:
 | `position <top\|left>`   | Call `buddy_style` with position arg                                                         |
 | `rarity on`              | Call `buddy_style` with showRarity=true                                                      |
 | `rarity off`             | Call `buddy_style` with showRarity=false                                                     |
+| `rainbow`                | Call `buddy_style` with no args (show current rainbow)                                       |
+| `rainbow <#hex> ...`     | Call `buddy_style` with rainbow=[...hex colors] to set shiny gradient                        |
+| `rainbow reset`          | Call `buddy_style` with rainbow=[] to restore default ROYGBIV                                |
 | `statusline`             | Call `buddy_statusline` with no args (show current)                                          |
 | `statusline on`          | Call `buddy_statusline` with enabled=true                                                    |
 | `statusline off`         | Call `buddy_statusline` with enabled=false                                                   |

@@ -17,6 +17,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../scripts/paths.sh"
 
 STATE="$BUDDY_STATE_DIR/status.json"
+CONFIG_FILE="$BUDDY_STATE_DIR/config.json"
 # Session ID: sanitized tmux pane number, or "default" outside tmux
 SID="${TMUX_PANE#%}"
 SID="${SID:-default}"
@@ -32,6 +33,7 @@ NAME=$(jq -r '.name // ""' "$STATE" 2>/dev/null)
 SPECIES=$(jq -r '.species // ""' "$STATE" 2>/dev/null)
 HAT=$(jq -r '.hat // "none"' "$STATE" 2>/dev/null)
 RARITY=$(jq -r '.rarity // "common"' "$STATE" 2>/dev/null)
+SHINY=$(jq -r '.shiny // false' "$STATE" 2>/dev/null)
 REACTION=$(jq -r '.reaction // ""' "$STATE" 2>/dev/null)
 ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 # eye is written to status.json by writeStatusState (v2+); fall back to "°"
@@ -66,6 +68,36 @@ case "$RARITY" in
 esac
 
 B=$'\xe2\xa0\x80'  # Braille Blank U+2800
+
+# ─── Rainbow colors for shiny buddies ────────────────────────────────────────
+# Default ROYGBIV palette; overridden by rainbowColors in config.json
+_hex_to_ansi() {
+    local hex="${1#\#}"
+    printf '\033[38;2;%d;%d;%dm' "$(( 16#${hex:0:2} ))" "$(( 16#${hex:2:2} ))" "$(( 16#${hex:4:2} ))"
+}
+
+RAINBOW=(
+  $'\033[38;2;255;50;50m'
+  $'\033[38;2;255;140;0m'
+  $'\033[38;2;255;220;0m'
+  $'\033[38;2;50;210;50m'
+  $'\033[38;2;50;120;255m'
+  $'\033[38;2;100;50;220m'
+  $'\033[38;2;180;50;220m'
+)
+
+if [ -f "$CONFIG_FILE" ]; then
+    _custom=$(jq -r '(.rainbowColors // []) | @tsv' "$CONFIG_FILE" 2>/dev/null)
+    if [ -n "$_custom" ]; then
+        RAINBOW=()
+        for _hex in $_custom; do
+            RAINBOW+=("$(_hex_to_ansi "$_hex")")
+        done
+    fi
+fi
+
+RAINBOW_LEN=${#RAINBOW[@]}
+RAINBOW_OFFSET=$(( NOW % RAINBOW_LEN ))
 
 # ─── Terminal width ──────────────────────────────────────────────────────────
 COLS=0
@@ -215,7 +247,7 @@ case "$SPECIES" in
       0) L0="}       {"; 
 	 L1="|\\^\`\`\`^/|"; 
 	 L2="\\ ${E}' '${E} /"; 
-	 L3=" \\ } { /";   
+	 L3=" \\ } { /";
 	 L4=" ≈(° °)≈";
 	 L5="   '-'" ;;
       1) L0="}       {"; 
@@ -278,10 +310,15 @@ if [ -n "$ACHIEVEMENT" ] && [ "$ACHIEVEMENT" != "null" ] && [ "$ACHIEVEMENT" != 
 fi
 REACTION_FILE="$BUDDY_STATE_DIR/reaction.$SID.json"
 REACTION_TTL=0
-CONFIG_FILE="$BUDDY_STATE_DIR/config.json"
+INNER_W=44
+MARGIN=8
 if [ -f "$CONFIG_FILE" ]; then
     _ttl=$(jq -r '.reactionTTL // 0' "$CONFIG_FILE" 2>/dev/null || echo 0)
     case "$_ttl" in ''|*[!0-9]*) ;; *) REACTION_TTL="$_ttl" ;; esac
+    _bw=$(jq -r '.bubbleWidth // 44' "$CONFIG_FILE" 2>/dev/null || echo 44)
+    case "$_bw" in ''|*[!0-9]*) ;; *) INNER_W="$_bw" ;; esac
+    _bm=$(jq -r '.bubbleMargin // 8' "$CONFIG_FILE" 2>/dev/null || echo 8)
+    case "$_bm" in ''|*[!0-9]*) ;; *) MARGIN="$_bm" ;; esac
 fi
 if [ -n "$REACTION" ] && [ "$REACTION" != "null" ] && [ "$REACTION" != "" ]; then
     FRESH=0
@@ -306,7 +343,6 @@ fi
 
 # ─── Build art lines ─────────────────────────────────────────────────────────
 
-INNER_W=44
 ART_LINES=()
 [ -n "$L0" ] && ART_LINES+=("$L0")
 ART_LINES+=("$L1" "$L2" "$L3")
@@ -325,9 +361,24 @@ DIM=$'\033[2;3m'
 
 ALL_LINES=()
 ALL_COLORS=()
-[ -n "$HAT_LINE" ] && { ALL_LINES+=("$HAT_LINE"); ALL_COLORS+=("$C"); }
+_arc=0
+if [ -n "$HAT_LINE" ]; then
+    ALL_LINES+=("$HAT_LINE")
+    if [ "$SHINY" = "true" ]; then
+        ALL_COLORS+=("${RAINBOW[$(( (_arc + RAINBOW_OFFSET) % RAINBOW_LEN ))]}")
+    else
+        ALL_COLORS+=("$C")
+    fi
+    _arc=$(( _arc + 1 ))
+fi
 for line in "${ART_LINES[@]}"; do
-    ALL_LINES+=("$line"); ALL_COLORS+=("$C")
+    ALL_LINES+=("$line")
+    if [ "$SHINY" = "true" ]; then
+        ALL_COLORS+=("${RAINBOW[$(( (_arc + RAINBOW_OFFSET) % RAINBOW_LEN ))]}")
+    else
+        ALL_COLORS+=("$C")
+    fi
+    _arc=$(( _arc + 1 ))
 done
 ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$DIM")
 
@@ -436,7 +487,6 @@ if [ $BUBBLE_COUNT -gt 0 ]; then
 else
     TOTAL_W=$ART_W
 fi
-MARGIN=8
 PAD=$(( COLS - TOTAL_W - MARGIN ))
 [ "$PAD" -lt 0 ] && PAD=0
 
