@@ -181,13 +181,16 @@ function stripLegacyPopupHooks(settings: Record<string, any>) {
 // ─── Step 4: Register hooks ─────────────────────────────────────────────────
 
 function installHooks(settings: Record<string, any>) {
-  const reactHook    = join(PROJECT_ROOT, "hooks", "react.sh");
-  const commentHook  = join(PROJECT_ROOT, "hooks", "buddy-comment.sh");
-  const nameHook     = join(PROJECT_ROOT, "hooks", "name-react.sh");
+  const reactHook     = join(PROJECT_ROOT, "hooks", "react.sh");
+  const fileTypeHook  = join(PROJECT_ROOT, "hooks", "file-type-react.sh");
+  const commentHook   = join(PROJECT_ROOT, "hooks", "buddy-comment.sh");
+  const nameHook      = join(PROJECT_ROOT, "hooks", "name-react.sh");
+  const moodHook      = join(PROJECT_ROOT, "hooks", "mood-react.sh");
 
   if (!settings.hooks) settings.hooks = {};
 
-  // PostToolUse: detect errors/test failures/successes in Bash output
+  // PostToolUse: detect errors/test failures/successes in Bash output,
+  // plus file-type specific reactions on Write/Edit.
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
   settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
@@ -195,6 +198,10 @@ function installHooks(settings: Record<string, any>) {
   settings.hooks.PostToolUse.push({
     matcher: "Bash",
     hooks: [{ type: "command", command: toUnixPath(reactHook) }],
+  });
+  settings.hooks.PostToolUse.push({
+    matcher: "Write|Edit",
+    hooks: [{ type: "command", command: toUnixPath(fileTypeHook) }],
   });
 
   // Stop: extract <!-- buddy: --> comment from Claude's response
@@ -206,7 +213,8 @@ function installHooks(settings: Record<string, any>) {
     hooks: [{ type: "command", command: toUnixPath(commentHook) }],
   });
 
-  // UserPromptSubmit: detect buddy's name in user message → instant status line reaction
+  // UserPromptSubmit: detect buddy's name in user message → instant status line
+  // reaction, plus mood-react based on prompt content.
   if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
   settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit.filter(
     (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
@@ -214,8 +222,11 @@ function installHooks(settings: Record<string, any>) {
   settings.hooks.UserPromptSubmit.push({
     hooks: [{ type: "command", command: toUnixPath(nameHook) }],
   });
+  settings.hooks.UserPromptSubmit.push({
+    hooks: [{ type: "command", command: toUnixPath(moodHook) }],
+  });
 
-  ok("Hooks registered: PostToolUse + Stop + UserPromptSubmit");
+  ok("Hooks registered: PostToolUse (Bash + Write/Edit) + Stop + UserPromptSubmit (name + mood)");
 }
 
 // ─── Step 5: Ensure MCP tools are allowed ───────────────────────────────────

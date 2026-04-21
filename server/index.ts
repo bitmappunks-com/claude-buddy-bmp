@@ -233,7 +233,21 @@ server.tool(
         "The buddy's comment, written in-character (1 short sentence, max 150 chars). Use *asterisks* for actions.",
       ),
     reason: z
-      .enum(["error", "test-fail", "large-diff", "turn"])
+      .enum([
+        "error", "test-fail", "large-diff", "turn",
+        "commit", "push", "merge-conflict", "branch", "rebase", "stash", "tag",
+        "late-night", "early-morning", "long-session", "marathon", "friday", "weekend", "monday",
+        "regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file",
+        "env-file", "test-file", "doc-file", "config-file", "binary-file", "gitignore",
+        "makefile", "readme", "package-file", "proto-file",
+        "lint-fail", "type-error", "build-fail", "security-warning", "deprecation",
+        "frustrated", "happy", "stuck", "sarcastic",
+        "many-edits", "delete-file", "large-file", "create-file",
+        "all-green", "deploy", "release", "coverage",
+        "debug-loop", "write-spree", "search-heavy",
+        "recovery-from-error", "recovery-from-test-fail",
+        "recovery-from-build-fail", "recovery-from-merge-conflict",
+      ])
       .optional()
       .describe("What triggered the reaction"),
   },

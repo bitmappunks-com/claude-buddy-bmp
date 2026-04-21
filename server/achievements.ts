@@ -1,14 +1,3 @@
-/**
- * Achievement badges — milestones that unlock as you code with your buddy
- *
- * Event counters are split into two scopes:
- *   Global (events.json):      coding-activity counters (errors, tests, diffs, days, sessions, commands)
- *   Per-slot (events.<slot>.json): buddy-relationship counters (pets, turns, reactions)
- *
- * Achievement checks merge both scopes so threshold logic is transparent.
- * All writes use tmp+rename for atomicity (same pattern as state.ts).
- */
-
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "fs";
 import { join } from "path";
 import { buddyStateDir } from "./path.ts";
@@ -33,8 +22,6 @@ function atomicWrite(path: string, data: string): void {
   renameSync(tmp, path);
 }
 
-// ─── Event counters (global) ─────────────────────────────────────────────────
-
 export interface GlobalCounters {
   errors_seen: number;
   tests_failed: number;
@@ -43,6 +30,7 @@ export interface GlobalCounters {
   commands_run: number;
   days_active: number;
   turns: number;
+  // From PR #68 (achievement expansion)
   buddies_collected: number;
   renames: number;
   personalities_set: number;
@@ -56,16 +44,40 @@ export interface GlobalCounters {
   saves: number;
   lists: number;
   achievements_unlocked: number;
+  // From PR #71 (reaction contexts expansion)
+  commits_made: number;
+  pushes_made: number;
+  conflicts_resolved: number;
+  branches_created: number;
+  rebases_done: number;
+  late_night_sessions: number;
+  early_sessions: number;
+  marathon_sessions: number;
+  weekend_sessions: number;
+  type_errors: number;
+  lint_fails: number;
+  build_fails: number;
+  security_warnings: number;
+  deprecations_seen: number;
+  all_green: number;
+  deploys: number;
+  releases: number;
+  late_night_commits: number;
+  friday_pushes: number;
+  marathon_errors: number;
+  weekend_conflicts: number;
+  recoveries: number;
+  marathon_recoveries: number;
+  max_error_streak: number;
+  holiday_sessions: number;
+  spooky_sessions: number;
+  april_fools_errors: number;
 }
-
-// ─── Event counters (per-slot) ────────────────────────────────────────────────
 
 export interface SlotCounters {
   pets: number;
   reactions_given: number;
 }
-
-// ─── Merged view for achievement checks ───────────────────────────────────────
 
 export interface EventCounters extends GlobalCounters {
   pets: number;
@@ -79,6 +91,15 @@ export const GLOBAL_KEYS: (keyof GlobalCounters)[] = [
   "mutes", "unmutes", "summons", "dismissals",
   "shows", "helps", "achievement_views", "saves", "lists",
   "achievements_unlocked",
+  "commits_made", "pushes_made", "conflicts_resolved",
+  "branches_created", "rebases_done",
+  "late_night_sessions", "early_sessions", "marathon_sessions", "weekend_sessions",
+  "type_errors", "lint_fails", "build_fails",
+  "security_warnings", "deprecations_seen",
+  "all_green", "deploys", "releases",
+  "late_night_commits", "friday_pushes", "marathon_errors", "weekend_conflicts",
+  "recoveries", "marathon_recoveries", "max_error_streak",
+  "holiday_sessions", "spooky_sessions", "april_fools_errors",
 ];
 
 export const SLOT_KEYS: (keyof SlotCounters)[] = [
@@ -86,21 +107,27 @@ export const SLOT_KEYS: (keyof SlotCounters)[] = [
 ];
 
 export const COUNTER_KEYS: (keyof EventCounters)[] = [
-  "errors_seen", "tests_failed", "large_diffs", "turns", "pets",
-  "sessions", "reactions_given", "commands_run", "days_active",
-  "buddies_collected", "renames", "personalities_set",
-  "mutes", "unmutes", "summons", "dismissals",
-  "shows", "helps", "achievement_views", "saves", "lists",
-  "achievements_unlocked",
+  ...GLOBAL_KEYS, ...SLOT_KEYS,
 ];
 
 const EMPTY_GLOBAL: GlobalCounters = {
   errors_seen: 0, tests_failed: 0, large_diffs: 0,
   sessions: 0, commands_run: 0, days_active: 0, turns: 0,
+  // From PR #68
   buddies_collected: 0, renames: 0, personalities_set: 0,
   mutes: 0, unmutes: 0, summons: 0, dismissals: 0,
   shows: 0, helps: 0, achievement_views: 0, saves: 0, lists: 0,
   achievements_unlocked: 0,
+  // From PR #71
+  commits_made: 0, pushes_made: 0, conflicts_resolved: 0,
+  branches_created: 0, rebases_done: 0,
+  late_night_sessions: 0, early_sessions: 0, marathon_sessions: 0, weekend_sessions: 0,
+  type_errors: 0, lint_fails: 0, build_fails: 0,
+  security_warnings: 0, deprecations_seen: 0,
+  all_green: 0, deploys: 0, releases: 0,
+  late_night_commits: 0, friday_pushes: 0, marathon_errors: 0, weekend_conflicts: 0,
+  recoveries: 0, marathon_recoveries: 0, max_error_streak: 0,
+  holiday_sessions: 0, spooky_sessions: 0, april_fools_errors: 0,
 };
 
 const EMPTY_SLOT: SlotCounters = {
@@ -161,14 +188,7 @@ export function incrementEvent(key: keyof EventCounters, amount: number = 1, slo
   return loadEvents(slot);
 }
 
-// ─── Backward-compatible overloads ────────────────────────────────────────────
-// The shell hooks (react.sh) write directly to events.json for global counters
-// like errors_seen and tests_failed. The loadEvents() and saveEvents() names
-// below maintain that compatibility.
-
 export { loadEvents as loadGlobalEventsCompat, loadGlobalEvents as loadGlobalEventsDirect };
-
-// ─── Day tracking ────────────────────────────────────────────────────────────
 
 interface DayTracker {
   lastDate: string;
@@ -193,8 +213,6 @@ export function trackActiveDay(): void {
   events.days_active = tracker.totalDays;
   saveGlobalEvents(events);
 }
-
-// ─── Achievement definitions ─────────────────────────────────────────────────
 
 export interface Achievement {
   id: string;
@@ -332,6 +350,310 @@ export const ACHIEVEMENTS: Achievement[] = [
     description: "Reach 1000 turns together",
     icon: "\ud83c\udf96",
     check: (e) => e.turns >= 1000,
+    secret: true,
+  },
+  {
+    id: "first_commit",
+    name: "First Blood",
+    description: "Make your first commit",
+    icon: "\ud83c\udfaf",
+    check: (e) => e.commits_made >= 1,
+    secret: false,
+  },
+  {
+    id: "commit_machine",
+    name: "Commit Machine",
+    description: "Make 50 commits",
+    icon: "\ud83c\udfed",
+    check: (e) => e.commits_made >= 50,
+    secret: false,
+  },
+  {
+    id: "centurion",
+    name: "Centurion",
+    description: "Make 100 commits",
+    icon: "\ud83d\udcaf",
+    check: (e) => e.commits_made >= 100,
+    secret: true,
+  },
+  {
+    id: "conflict_resolver",
+    name: "Diplomat",
+    description: "Resolve your first merge conflict",
+    icon: "\ud83d\udd4a\ufe0f",
+    check: (e) => e.conflicts_resolved >= 1,
+    secret: false,
+  },
+  {
+    id: "peacekeeper",
+    name: "Peacekeeper",
+    description: "Resolve 10 merge conflicts",
+    icon: "\u2696\ufe0f",
+    check: (e) => e.conflicts_resolved >= 10,
+    secret: false,
+  },
+  {
+    id: "war_hero",
+    name: "War Hero",
+    description: "Resolve 25 merge conflicts",
+    icon: "\u2694\ufe0f",
+    check: (e) => e.conflicts_resolved >= 25,
+    secret: true,
+  },
+  {
+    id: "frequent_pusher",
+    name: "Ship It",
+    description: "Push 20 times",
+    icon: "\ud83d\ude80",
+    check: (e) => e.pushes_made >= 20,
+    secret: false,
+  },
+  {
+    id: "branch_hopper",
+    name: "Multiverse",
+    description: "Create 10 branches",
+    icon: "\ud83d\udd00",
+    check: (e) => e.branches_created >= 10,
+    secret: false,
+  },
+  {
+    id: "rebase_master",
+    name: "Time Traveler",
+    description: "Complete 10 rebases",
+    icon: "\u23f3",
+    check: (e) => e.rebases_done >= 10,
+    secret: false,
+  },
+  {
+    id: "night_owl",
+    name: "Night Owl",
+    description: "Code past 2am",
+    icon: "\ud83e\udd89",
+    check: (e) => e.late_night_sessions >= 1,
+    secret: false,
+  },
+  {
+    id: "vampire",
+    name: "Vampire",
+    description: "Code past 4am (3 sessions)",
+    icon: "\ud83e\udddb",
+    check: (e) => e.late_night_sessions >= 3,
+    secret: true,
+  },
+  {
+    id: "marathoner",
+    name: "Marathoner",
+    description: "3+ hour coding session",
+    icon: "\ud83c\udfc3",
+    check: (e) => e.marathon_sessions >= 1,
+    secret: false,
+  },
+  {
+    id: "weekend_warrior",
+    name: "Weekend Warrior",
+    description: "Code on a weekend",
+    icon: "\u2694\ufe0f",
+    check: (e) => e.weekend_sessions >= 1,
+    secret: false,
+  },
+  {
+    id: "early_bird",
+    name: "Early Bird",
+    description: "Code before 7am",
+    icon: "\ud83d\udc26",
+    check: (e) => e.early_sessions >= 1,
+    secret: false,
+  },
+  {
+    id: "type_warrior",
+    name: "Type Warrior",
+    description: "Survive 10 TypeScript errors",
+    icon: "\ud83d\udee1\ufe0f",
+    check: (e) => e.type_errors >= 10,
+    secret: false,
+  },
+  {
+    id: "type_master",
+    name: "Type Master",
+    description: "Survive 50 TypeScript errors",
+    icon: "\ud83e\uddd9",
+    check: (e) => e.type_errors >= 50,
+    secret: true,
+  },
+  {
+    id: "lint_scholar",
+    name: "Lint Scholar",
+    description: "See your first lint error",
+    icon: "\ud83d\udccf",
+    check: (e) => e.lint_fails >= 1,
+    secret: false,
+  },
+  {
+    id: "security_conscious",
+    name: "Security Mind",
+    description: "Encounter a vulnerability warning",
+    icon: "\ud83d\udd12",
+    check: (e) => e.security_warnings >= 1,
+    secret: false,
+  },
+  {
+    id: "security_expert",
+    name: "Security Expert",
+    description: "Fix 10 vulnerability warnings",
+    icon: "\ud83c\udfc6",
+    check: (e) => e.security_warnings >= 10,
+    secret: false,
+  },
+  {
+    id: "build_breaker",
+    name: "Build Breaker",
+    description: "Break the build 5 times",
+    icon: "\ud83d\udca5",
+    check: (e) => e.build_fails >= 5,
+    secret: false,
+  },
+  {
+    id: "antique_collector",
+    name: "Antique Collector",
+    description: "See 10 deprecation warnings",
+    icon: "\ud83c\udfdb\ufe0f",
+    check: (e) => e.deprecations_seen >= 10,
+    secret: false,
+  },
+  {
+    id: "green_machine",
+    name: "Green Machine",
+    description: "All tests pass for the first time",
+    icon: "\u2705",
+    check: (e) => e.all_green >= 1,
+    secret: false,
+  },
+  {
+    id: "deployer",
+    name: "Ship to Prod",
+    description: "Deploy for the first time",
+    icon: "\ud83d\udea2",
+    check: (e) => e.deploys >= 1,
+    secret: false,
+  },
+  {
+    id: "veteran_deployer",
+    name: "Veteran Deployer",
+    description: "Deploy 10 times",
+    icon: "\u2693",
+    check: (e) => e.deploys >= 10,
+    secret: false,
+  },
+  {
+    id: "releaser",
+    name: "Release Manager",
+    description: "Create your first release",
+    icon: "\ud83d\udce6",
+    check: (e) => e.releases >= 1,
+    secret: false,
+  },
+  {
+    id: "midnight_oil",
+    name: "Burning the Midnight Oil",
+    description: "Commit past 3am",
+    icon: "\ud83d\udd6f\ufe0f",
+    check: (e) => e.late_night_commits >= 1,
+    secret: false,
+  },
+  {
+    id: "friday_deploy",
+    name: "Living Dangerously",
+    description: "Push on a Friday",
+    icon: "\ud83c\udfb0",
+    check: (e) => e.friday_pushes >= 1,
+    secret: false,
+  },
+  {
+    id: "iron_will",
+    name: "Iron Will",
+    description: "Fix an error after 3+ hour session",
+    icon: "\ud83d\udcaa",
+    check: (e) => e.marathon_errors >= 1,
+    secret: false,
+  },
+  {
+    id: "weekend_warrior_deluxe",
+    name: "No Rest for the Wicked",
+    description: "Resolve a merge conflict on a weekend",
+    icon: "\ud83d\ude08",
+    check: (e) => e.weekend_conflicts >= 1,
+    secret: true,
+  },
+  {
+    id: "comeback_kid",
+    name: "Comeback Kid",
+    description: "Fix an error within 10 minutes of seeing it",
+    icon: "\ud83d\udd04",
+    check: (e) => e.recoveries >= 1,
+    secret: false,
+  },
+  {
+    id: "phoenix",
+    name: "Phoenix Rising",
+    description: "Recover from 5 failures",
+    icon: "\ud83d\udd25",
+    check: (e) => e.recoveries >= 5,
+    secret: false,
+  },
+  {
+    id: "iron_resolve",
+    name: "Iron Resolve",
+    description: "Recover from a failure after 3+ hour session",
+    icon: "\ud83d\udc8e",
+    check: (e) => e.marathon_recoveries >= 1,
+    secret: true,
+  },
+  {
+    id: "unlucky_streak",
+    name: "Snake Eyes",
+    description: "5 errors in a row",
+    icon: "\ud83c\udfb2",
+    check: (e) => e.max_error_streak >= 5,
+    secret: false,
+  },
+  {
+    id: "cursed",
+    name: "Cursed",
+    description: "10 errors in a row",
+    icon: "\ud83d\udc80",
+    check: (e) => e.max_error_streak >= 10,
+    secret: true,
+  },
+  {
+    id: "groundhog_day",
+    name: "Groundhog Day",
+    description: "20 errors in a row",
+    icon: "\ud83d\udd04",
+    check: (e) => e.max_error_streak >= 20,
+    secret: true,
+  },
+  {
+    id: "holiday_coder",
+    name: "Holiday Spirit",
+    description: "Code on a holiday",
+    icon: "\ud83c\udf84",
+    check: (e) => e.holiday_sessions >= 1,
+    secret: false,
+  },
+  {
+    id: "spooky_dev",
+    name: "Spooky Developer",
+    description: "Code during spooky season",
+    icon: "\ud83c\udf83",
+    check: (e) => e.spooky_sessions >= 1,
+    secret: false,
+  },
+  {
+    id: "april_fool",
+    name: "Fool Me Once",
+    description: "Encounter an error on April 1st",
+    icon: "\ud83e\udd21",
+    check: (e) => e.april_fools_errors >= 1,
     secret: true,
   },
   {
@@ -948,8 +1270,6 @@ export const ACHIEVEMENTS: Achievement[] = [
   },
 ];
 
-// ─── Unlocked badges persistence ─────────────────────────────────────────────
-
 export interface UnlockedAchievement {
   id: string;
   unlockedAt: number;
@@ -967,8 +1287,6 @@ export function loadUnlocked(): UnlockedAchievement[] {
 export function saveUnlocked(unlocked: UnlockedAchievement[]): void {
   atomicWrite(UNLOCKED_FILE, JSON.stringify(unlocked, null, 2));
 }
-
-// ─── Check + award ───────────────────────────────────────────────────────────
 
 export function checkAndAward(slot?: string): Achievement[] {
   const e = loadEvents(slot);
@@ -997,8 +1315,6 @@ export function checkAndAward(slot?: string): Achievement[] {
 
   return newlyUnlocked;
 }
-
-// ─── Render achievement card ─────────────────────────────────────────────────
 
 const GOLD = "\x1b[38;2;255;193;7m";
 const NC = "\x1b[0m";

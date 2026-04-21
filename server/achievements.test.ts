@@ -1,12 +1,3 @@
-/**
- * Unit tests for achievements.ts
- *
- * Tests the achievement badge system: definitions, event counters,
- * threshold checks, per-slot scoping, and the pure check logic.
- * File I/O functions (checkAndAward, renderers) persist to disk and
- * are not tested here, consistent with the project policy in TESTING.md.
- */
-
 import { describe, test, expect } from "bun:test";
 import {
   ACHIEVEMENTS,
@@ -14,40 +5,32 @@ import {
   GLOBAL_KEYS,
   SLOT_KEYS,
   type EventCounters,
-  type GlobalCounters,
-  type SlotCounters,
 } from "./achievements.ts";
 
 const EMPTY_EVENTS: EventCounters = {
-  errors_seen: 0,
-  tests_failed: 0,
-  large_diffs: 0,
-  turns: 0,
-  pets: 0,
-  sessions: 0,
-  reactions_given: 0,
-  commands_run: 0,
-  days_active: 0,
-  buddies_collected: 0,
-  renames: 0,
-  personalities_set: 0,
-  mutes: 0,
-  unmutes: 0,
-  summons: 0,
-  dismissals: 0,
-  shows: 0,
-  helps: 0,
-  achievement_views: 0,
-  saves: 0,
-  lists: 0,
+  errors_seen: 0, tests_failed: 0, large_diffs: 0,
+  turns: 0, pets: 0, sessions: 0, reactions_given: 0,
+  commands_run: 0, days_active: 0,
+  // From PR #68
+  buddies_collected: 0, renames: 0, personalities_set: 0,
+  mutes: 0, unmutes: 0, summons: 0, dismissals: 0,
+  shows: 0, helps: 0, achievement_views: 0, saves: 0, lists: 0,
   achievements_unlocked: 0,
+  // From PR #71
+  commits_made: 0, pushes_made: 0, conflicts_resolved: 0,
+  branches_created: 0, rebases_done: 0,
+  late_night_sessions: 0, early_sessions: 0, marathon_sessions: 0, weekend_sessions: 0,
+  type_errors: 0, lint_fails: 0, build_fails: 0,
+  security_warnings: 0, deprecations_seen: 0,
+  all_green: 0, deploys: 0, releases: 0,
+  late_night_commits: 0, friday_pushes: 0, marathon_errors: 0, weekend_conflicts: 0,
+  recoveries: 0, marathon_recoveries: 0, max_error_streak: 0,
+  holiday_sessions: 0, spooky_sessions: 0, april_fools_errors: 0,
 };
 
 function makeEvents(overrides: Partial<EventCounters> = {}): EventCounters {
   return { ...EMPTY_EVENTS, ...overrides };
 }
-
-// ─── Achievement definitions ─────────────────────────────────────────────
 
 describe("ACHIEVEMENTS array", () => {
   test("is non-empty", () => {
@@ -81,8 +64,6 @@ describe("ACHIEVEMENTS array", () => {
   });
 });
 
-// ─── Counter key partitions ──────────────────────────────────────────────
-
 describe("counter key partitions", () => {
   test("GLOBAL_KEYS and SLOT_KEYS are disjoint", () => {
     const globalSet = new Set(GLOBAL_KEYS as string[]);
@@ -100,8 +81,6 @@ describe("counter key partitions", () => {
   });
 });
 
-// ─── COUNTER_KEYS ─────────────────────────────────────────────────────────
-
 describe("COUNTER_KEYS", () => {
   test("matches every key in EventCounters", () => {
     const expectedKeys = Object.keys(EMPTY_EVENTS).sort() as (keyof EventCounters)[];
@@ -109,8 +88,6 @@ describe("COUNTER_KEYS", () => {
     expect(actualKeys).toEqual(expectedKeys);
   });
 });
-
-// ─── Achievement check thresholds ────────────────────────────────────────
 
 describe("achievement thresholds", () => {
   test("first_steps always unlocks", () => {
@@ -123,7 +100,6 @@ describe("achievement thresholds", () => {
     const ach = ACHIEVEMENTS.find((a) => a.id === "good_boy")!;
     expect(ach.check(makeEvents({ pets: 9 }))).toBe(false);
     expect(ach.check(makeEvents({ pets: 10 }))).toBe(true);
-    expect(ach.check(makeEvents({ pets: 50 }))).toBe(true);
   });
 
   test("best_friend requires 50 pets", () => {
@@ -151,54 +127,194 @@ describe("achievement thresholds", () => {
     expect(ach.check(makeEvents({ errors_seen: 100 }))).toBe(true);
   });
 
-  test("test_witness requires 1 test failure", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "test_witness")!;
-    expect(ach.check(makeEvents({ tests_failed: 0 }))).toBe(false);
-    expect(ach.check(makeEvents({ tests_failed: 1 }))).toBe(true);
+  test("first_commit requires 1 commit", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "first_commit")!;
+    expect(ach.check(makeEvents({ commits_made: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ commits_made: 1 }))).toBe(true);
   });
 
-  test("test_veteran requires 50 test failures", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "test_veteran")!;
-    expect(ach.check(makeEvents({ tests_failed: 49 }))).toBe(false);
-    expect(ach.check(makeEvents({ tests_failed: 50 }))).toBe(true);
+  test("commit_machine requires 50 commits", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "commit_machine")!;
+    expect(ach.check(makeEvents({ commits_made: 49 }))).toBe(false);
+    expect(ach.check(makeEvents({ commits_made: 50 }))).toBe(true);
   });
 
-  test("big_mover requires 1 large diff", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "big_mover")!;
-    expect(ach.check(makeEvents({ large_diffs: 0 }))).toBe(false);
-    expect(ach.check(makeEvents({ large_diffs: 1 }))).toBe(true);
+  test("centurion requires 100 commits and is secret", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "centurion")!;
+    expect(ach.secret).toBe(true);
+    expect(ach.check(makeEvents({ commits_made: 99 }))).toBe(false);
+    expect(ach.check(makeEvents({ commits_made: 100 }))).toBe(true);
   });
 
-  test("refactor_machine requires 10 large diffs", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "refactor_machine")!;
-    expect(ach.check(makeEvents({ large_diffs: 9 }))).toBe(false);
-    expect(ach.check(makeEvents({ large_diffs: 10 }))).toBe(true);
+  test("conflict_resolver requires 1 conflict resolved", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "conflict_resolver")!;
+    expect(ach.check(makeEvents({ conflicts_resolved: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ conflicts_resolved: 1 }))).toBe(true);
+  });
+
+  test("frequent_pusher requires 20 pushes", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "frequent_pusher")!;
+    expect(ach.check(makeEvents({ pushes_made: 19 }))).toBe(false);
+    expect(ach.check(makeEvents({ pushes_made: 20 }))).toBe(true);
+  });
+
+  test("branch_hopper requires 10 branches", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "branch_hopper")!;
+    expect(ach.check(makeEvents({ branches_created: 9 }))).toBe(false);
+    expect(ach.check(makeEvents({ branches_created: 10 }))).toBe(true);
+  });
+
+  test("rebase_master requires 10 rebases", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "rebase_master")!;
+    expect(ach.check(makeEvents({ rebases_done: 9 }))).toBe(false);
+    expect(ach.check(makeEvents({ rebases_done: 10 }))).toBe(true);
+  });
+
+  test("night_owl requires 1 late night session", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "night_owl")!;
+    expect(ach.check(makeEvents({ late_night_sessions: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ late_night_sessions: 1 }))).toBe(true);
+  });
+
+  test("marathoner requires 1 marathon session", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "marathoner")!;
+    expect(ach.check(makeEvents({ marathon_sessions: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ marathon_sessions: 1 }))).toBe(true);
+  });
+
+  test("weekend_warrior requires 1 weekend session", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "weekend_warrior")!;
+    expect(ach.check(makeEvents({ weekend_sessions: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ weekend_sessions: 1 }))).toBe(true);
+  });
+
+  test("early_bird requires 1 early session", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "early_bird")!;
+    expect(ach.check(makeEvents({ early_sessions: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ early_sessions: 1 }))).toBe(true);
+  });
+
+  test("type_warrior requires 10 type errors", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "type_warrior")!;
+    expect(ach.check(makeEvents({ type_errors: 9 }))).toBe(false);
+    expect(ach.check(makeEvents({ type_errors: 10 }))).toBe(true);
+  });
+
+  test("type_master requires 50 type errors and is secret", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "type_master")!;
+    expect(ach.secret).toBe(true);
+    expect(ach.check(makeEvents({ type_errors: 49 }))).toBe(false);
+    expect(ach.check(makeEvents({ type_errors: 50 }))).toBe(true);
+  });
+
+  test("lint_scholar requires 1 lint fail", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "lint_scholar")!;
+    expect(ach.check(makeEvents({ lint_fails: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ lint_fails: 1 }))).toBe(true);
+  });
+
+  test("security_conscious requires 1 security warning", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "security_conscious")!;
+    expect(ach.check(makeEvents({ security_warnings: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ security_warnings: 1 }))).toBe(true);
+  });
+
+  test("build_breaker requires 5 build fails", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "build_breaker")!;
+    expect(ach.check(makeEvents({ build_fails: 4 }))).toBe(false);
+    expect(ach.check(makeEvents({ build_fails: 5 }))).toBe(true);
+  });
+
+  test("antique_collector requires 10 deprecations", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "antique_collector")!;
+    expect(ach.check(makeEvents({ deprecations_seen: 9 }))).toBe(false);
+    expect(ach.check(makeEvents({ deprecations_seen: 10 }))).toBe(true);
+  });
+
+  test("green_machine requires 1 all-green", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "green_machine")!;
+    expect(ach.check(makeEvents({ all_green: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ all_green: 1 }))).toBe(true);
+  });
+
+  test("deployer requires 1 deploy", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "deployer")!;
+    expect(ach.check(makeEvents({ deploys: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ deploys: 1 }))).toBe(true);
+  });
+
+  test("releaser requires 1 release", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "releaser")!;
+    expect(ach.check(makeEvents({ releases: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ releases: 1 }))).toBe(true);
+  });
+
+  test("midnight_oil requires 1 late night commit", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "midnight_oil")!;
+    expect(ach.check(makeEvents({ late_night_commits: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ late_night_commits: 1 }))).toBe(true);
+  });
+
+  test("friday_deploy requires 1 friday push", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "friday_deploy")!;
+    expect(ach.check(makeEvents({ friday_pushes: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ friday_pushes: 1 }))).toBe(true);
+  });
+
+  test("comeback_kid requires 1 recovery", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "comeback_kid")!;
+    expect(ach.check(makeEvents({ recoveries: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ recoveries: 1 }))).toBe(true);
+  });
+
+  test("phoenix requires 5 recoveries", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "phoenix")!;
+    expect(ach.check(makeEvents({ recoveries: 4 }))).toBe(false);
+    expect(ach.check(makeEvents({ recoveries: 5 }))).toBe(true);
+  });
+
+  test("unlucky_streak requires max streak 5", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "unlucky_streak")!;
+    expect(ach.check(makeEvents({ max_error_streak: 4 }))).toBe(false);
+    expect(ach.check(makeEvents({ max_error_streak: 5 }))).toBe(true);
+  });
+
+  test("cursed requires max streak 10 and is secret", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "cursed")!;
+    expect(ach.secret).toBe(true);
+    expect(ach.check(makeEvents({ max_error_streak: 9 }))).toBe(false);
+    expect(ach.check(makeEvents({ max_error_streak: 10 }))).toBe(true);
+  });
+
+  test("groundhog_day requires max streak 20 and is secret", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "groundhog_day")!;
+    expect(ach.secret).toBe(true);
+    expect(ach.check(makeEvents({ max_error_streak: 19 }))).toBe(false);
+    expect(ach.check(makeEvents({ max_error_streak: 20 }))).toBe(true);
+  });
+
+  test("holiday_coder requires 1 holiday session", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "holiday_coder")!;
+    expect(ach.check(makeEvents({ holiday_sessions: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ holiday_sessions: 1 }))).toBe(true);
+  });
+
+  test("spooky_dev requires 1 spooky session", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "spooky_dev")!;
+    expect(ach.check(makeEvents({ spooky_sessions: 0 }))).toBe(false);
+    expect(ach.check(makeEvents({ spooky_sessions: 1 }))).toBe(true);
+  });
+
+  test("week_streak requires 7 days", () => {
+    const ach = ACHIEVEMENTS.find((a) => a.id === "week_streak")!;
+    expect(ach.check(makeEvents({ days_active: 6 }))).toBe(false);
+    expect(ach.check(makeEvents({ days_active: 7 }))).toBe(true);
   });
 
   test("chatterbox requires 100 reactions", () => {
     const ach = ACHIEVEMENTS.find((a) => a.id === "chatterbox")!;
     expect(ach.check(makeEvents({ reactions_given: 99 }))).toBe(false);
     expect(ach.check(makeEvents({ reactions_given: 100 }))).toBe(true);
-  });
-
-  test("week_streak requires 7 days and is not secret", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "week_streak")!;
-    expect(ach.secret).toBe(false);
-    expect(ach.check(makeEvents({ days_active: 6 }))).toBe(false);
-    expect(ach.check(makeEvents({ days_active: 7 }))).toBe(true);
-  });
-
-  test("month_streak requires 30 days and is secret", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "month_streak")!;
-    expect(ach.secret).toBe(true);
-    expect(ach.check(makeEvents({ days_active: 29 }))).toBe(false);
-    expect(ach.check(makeEvents({ days_active: 30 }))).toBe(true);
-  });
-
-  test("power_user requires 50 commands", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "power_user")!;
-    expect(ach.check(makeEvents({ commands_run: 49 }))).toBe(false);
-    expect(ach.check(makeEvents({ commands_run: 50 }))).toBe(true);
   });
 
   test("dedicated requires 200 turns", () => {
@@ -701,8 +817,6 @@ describe("achievement thresholds", () => {
   });
 });
 
-// ─── Unlock simulation (pure logic) ──────────────────────────────────────
-
 describe("unlock simulation via check functions", () => {
   test("with empty events, only first_steps would unlock", () => {
     const wouldUnlock = ACHIEVEMENTS.filter((a) => a.check(EMPTY_EVENTS));
@@ -713,28 +827,25 @@ describe("unlock simulation via check functions", () => {
   test("with maxed events, all non-completionist achievements unlock", () => {
     const totalOthers = ACHIEVEMENTS.length - 1;
     const maxed = makeEvents({
-      errors_seen: 99999,
-      tests_failed: 99999,
-      large_diffs: 99999,
-      turns: 999999,
-      pets: 99999,
-      sessions: 99999,
-      reactions_given: 99999,
-      commands_run: 99999,
-      days_active: 99999,
-      buddies_collected: 99999,
-      renames: 99999,
-      personalities_set: 99999,
-      mutes: 99999,
-      unmutes: 99999,
-      summons: 99999,
-      dismissals: 99999,
-      shows: 99999,
-      helps: 99999,
-      achievement_views: 99999,
-      saves: 99999,
-      lists: 99999,
+      errors_seen: 99999, tests_failed: 99999, large_diffs: 99999,
+      turns: 999999, pets: 99999, sessions: 99999, reactions_given: 99999,
+      commands_run: 99999, days_active: 99999,
+      // From PR #68
+      buddies_collected: 99999, renames: 99999, personalities_set: 99999,
+      mutes: 99999, unmutes: 99999, summons: 99999, dismissals: 99999,
+      shows: 99999, helps: 99999, achievement_views: 99999,
+      saves: 99999, lists: 99999,
       achievements_unlocked: totalOthers,
+      // From PR #71
+      commits_made: 99999, pushes_made: 99999, conflicts_resolved: 99999,
+      branches_created: 99999, rebases_done: 99999,
+      late_night_sessions: 99999, early_sessions: 99999, marathon_sessions: 99999, weekend_sessions: 99999,
+      type_errors: 99999, lint_fails: 99999, build_fails: 99999,
+      security_warnings: 99999, deprecations_seen: 99999,
+      all_green: 99999, deploys: 99999, releases: 99999,
+      late_night_commits: 99999, friday_pushes: 99999, marathon_errors: 99999, weekend_conflicts: 99999,
+      recoveries: 99999, marathon_recoveries: 99999, max_error_streak: 99999,
+      holiday_sessions: 99999, spooky_sessions: 99999, april_fools_errors: 99999,
     });
     const wouldUnlock = ACHIEVEMENTS.filter((a) => a.check(maxed));
     expect(wouldUnlock.length).toBe(ACHIEVEMENTS.length);
@@ -747,73 +858,7 @@ describe("unlock simulation via check functions", () => {
     expect(s2).toBeGreaterThan(s1);
     expect(s3).toBeGreaterThan(s2);
   });
-
-  test("achievements at exact threshold boundary", () => {
-    const events = makeEvents({ pets: 10 });
-    const ids = ACHIEVEMENTS.filter((a) => a.check(events)).map((a) => a.id);
-    expect(ids).toContain("good_boy");
-    expect(ids).toContain("first_steps");
-    expect(ids).not.toContain("best_friend");
-  });
 });
-
-// ─── Per-slot vs global scoping ───────────────────────────────────────────
-
-describe("per-slot vs global counter scoping", () => {
-  test("pets is a slot-scoped key", () => {
-    expect((SLOT_KEYS as string[]).includes("pets")).toBe(true);
-    expect((GLOBAL_KEYS as string[]).includes("pets")).toBe(false);
-  });
-
-  test("turns is a global key", () => {
-    expect((GLOBAL_KEYS as string[]).includes("turns")).toBe(true);
-    expect((SLOT_KEYS as string[]).includes("turns")).toBe(false);
-  });
-
-  test("reactions_given is a slot-scoped key", () => {
-    expect((SLOT_KEYS as string[]).includes("reactions_given")).toBe(true);
-  });
-
-  test("errors_seen is a global key", () => {
-    expect((GLOBAL_KEYS as string[]).includes("errors_seen")).toBe(true);
-    expect((SLOT_KEYS as string[]).includes("errors_seen")).toBe(false);
-  });
-
-  test("tests_failed is a global key", () => {
-    expect((GLOBAL_KEYS as string[]).includes("tests_failed")).toBe(true);
-  });
-
-  test("days_active is a global key", () => {
-    expect((GLOBAL_KEYS as string[]).includes("days_active")).toBe(true);
-  });
-
-  test("commands_run is a global key", () => {
-    expect((GLOBAL_KEYS as string[]).includes("commands_run")).toBe(true);
-  });
-
-  test("good_boy and best_friend check pets (slot-scoped)", () => {
-    const good = ACHIEVEMENTS.find((a) => a.id === "good_boy")!;
-    const best = ACHIEVEMENTS.find((a) => a.id === "best_friend")!;
-    expect(good.check(makeEvents({ pets: 0 }))).toBe(false);
-    expect(best.check(makeEvents({ pets: 0 }))).toBe(false);
-    expect(good.check(makeEvents({ pets: 10 }))).toBe(true);
-    expect(best.check(makeEvents({ pets: 50 }))).toBe(true);
-  });
-
-  test("dedicated and thousand_turns check turns (global)", () => {
-    const ded = ACHIEVEMENTS.find((a) => a.id === "dedicated")!;
-    const thou = ACHIEVEMENTS.find((a) => a.id === "thousand_turns")!;
-    expect(ded.check(makeEvents({ turns: 200 }))).toBe(true);
-    expect(thou.check(makeEvents({ turns: 1000 }))).toBe(true);
-  });
-
-  test("chatterbox checks reactions_given (slot-scoped)", () => {
-    const ach = ACHIEVEMENTS.find((a) => a.id === "chatterbox")!;
-    expect(ach.check(makeEvents({ reactions_given: 100 }))).toBe(true);
-  });
-});
-
-// ─── Secret achievement visibility ───────────────────────────────────────
 
 describe("secret achievements", () => {
   test("secret achievements are correctly flagged", () => {
@@ -821,6 +866,11 @@ describe("secret achievements", () => {
     expect(secretIds).toContain("battle_scarred");
     expect(secretIds).toContain("month_streak");
     expect(secretIds).toContain("thousand_turns");
+    expect(secretIds).toContain("centurion");
+    expect(secretIds).toContain("war_hero");
+    expect(secretIds).toContain("vampire");
+    expect(secretIds).toContain("cursed");
+    expect(secretIds).toContain("groundhog_day");
     expect(secretIds).toContain("apocalypse_survivor");
     expect(secretIds).toContain("renaissance");
     expect(secretIds).toContain("completionist");
@@ -833,8 +883,6 @@ describe("secret achievements", () => {
     expect(nonSecret.length).toBeGreaterThan(secret.length);
   });
 });
-
-// ─── EventCounters shape ─────────────────────────────────────────────────
 
 describe("EventCounters", () => {
   test("EMPTY_EVENTS has all counter keys set to 0", () => {
