@@ -83,6 +83,7 @@ row("Bash version", tryExec("bash --version | head -1"));
 row("Bun version", tryExec("bun --version"));
 row("Node version", tryExec("node --version", "(not installed)"));
 row("jq version", tryExec("jq --version", "(not installed)"));
+row("chafa version", tryExec("chafa --version", "(not installed)"));
 row("Claude Code version", tryExec("claude --version", "(not in PATH)"));
 
 // ─── Terminal ───────────────────────────────────────────────────────────────

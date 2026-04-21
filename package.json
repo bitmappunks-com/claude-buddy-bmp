@@ -33,6 +33,7 @@
     "skills/",
     "hooks/",
     "statusline/",
+    "assets/",
     ".claude-plugin/",
     "!**/*.test.ts"
   ],
