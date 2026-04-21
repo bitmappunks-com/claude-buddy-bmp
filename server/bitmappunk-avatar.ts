@@ -48,6 +48,14 @@ function getLogicalSize(svg: string): { width: number; height: number } {
   return { width, height };
 }
 
+function ansiFg(r: number, g: number, b: number): string {
+  return `\x1b[38;2;${r};${g};${b}m`;
+}
+
+function ansiBg(r: number, g: number, b: number): string {
+  return `\x1b[48;2;${r};${g};${b}m`;
+}
+
 function svgToAnsiFrame(svg: string): string[] {
   const { width, height } = getLogicalSize(svg);
   const grid = Array.from({ length: height }, () =>
@@ -66,13 +74,31 @@ function svgToAnsiFrame(svg: string): string[] {
     }
   }
 
-  return grid.map((row) =>
-    row
-      .map(([r, g, b, a]) =>
-        a === 0 ? " " : `\x1b[38;2;${r};${g};${b}m█\x1b[0m`,
-      )
-      .join(""),
-  );
+  const rows: string[] = [];
+  for (let y = 0; y < height; y += 2) {
+    const top = grid[y];
+    const bottom = grid[y + 1] ?? Array.from({ length: width }, () => [0, 0, 0, 0] as [number, number, number, number]);
+    let line = "";
+
+    for (let x = 0; x < width; x += 1) {
+      const [tr, tg, tb, ta] = top[x];
+      const [br, bg, bb, ba] = bottom[x];
+
+      if (ta === 0 && ba === 0) {
+        line += " ";
+      } else if (ta > 0 && ba > 0) {
+        line += `${ansiFg(tr, tg, tb)}${ansiBg(br, bg, bb)}▀\x1b[0m`;
+      } else if (ta > 0) {
+        line += `${ansiFg(tr, tg, tb)}▀\x1b[0m`;
+      } else {
+        line += `${ansiFg(br, bg, bb)}▄\x1b[0m`;
+      }
+    }
+
+    rows.push(line);
+  }
+
+  return rows;
 }
 
 export const HELLO_BITMAPPUNK_FRAME = svgToAnsiFrame(HELLO_BITMAPPUNK_SVG);
