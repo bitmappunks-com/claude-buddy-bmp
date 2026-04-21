@@ -399,19 +399,18 @@ const FACE_TEMPLATES: Record<Species, string> = {
   wyvern: "\\ {E}' '{E} /",
 };
 
-export function renderFace(species: Species, eye: Eye): string {
-  return FACE_TEMPLATES[species].replace(/\{E\}/g, eye);
+export function renderFace(_species: Species, eye: Eye): string {
+  return `▣${eye}▣`;
 }
 
 export function renderBuddy(bones: BuddyBones): string {
-  const face = renderFace(bones.species, bones.eye);
-  const hat = HAT_ART[bones.hat];
+  const { getArtFrame } = require("./art.ts") as typeof import("./art.ts");
+  const art = getArtFrame(bones.species, bones.eye, 0);
   const shiny = bones.shiny ? "\u2728 " : "";
   const stars = RARITY_STARS[bones.rarity];
 
   const lines: string[] = [];
-  if (hat) lines.push(hat);
-  lines.push(`  ${face}`);
+  lines.push(...art);
   lines.push("");
   lines.push(`${shiny}${bones.rarity} ${bones.species} ${stars}`);
   lines.push("");

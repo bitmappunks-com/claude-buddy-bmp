@@ -9,6 +9,7 @@ import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
+import { HELLO_BITMAPPUNK_FRAME } from "./bitmappunk-avatar.ts";
 import { SPECIES, type BuddyBones } from "./engine.ts";
 
 describe("displayWidth", () => {
@@ -81,43 +82,34 @@ describe("getStatusFrames", () => {
     expect(frameSequence).toEqual([...STATUS_FRAME_SEQUENCE]);
   });
 
-  test("every species produces 4 frames, each with 5-6 lines", () => {
+  test("every species produces 4 bitmap frames, each matching the generated avatar height", () => {
     for (const species of SPECIES) {
       const { frames } = getStatusFrames(bones({ species }));
       expect(frames).toHaveLength(4);
       for (const body of frames) {
-        const lines = body.split("\n").length;
-        expect(lines).toBeGreaterThanOrEqual(5);
-        expect(lines).toBeLessThanOrEqual(6);
+        const lines = body.split("\n");
+        expect(lines).toHaveLength(HELLO_BITMAPPUNK_FRAME.length);
+        expect(body).toContain("\x1b[48;2;");
       }
     }
   });
 
-  test("eye is replaced in idle frames", () => {
+  test("idle frames ignore eye substitutions because the implanted avatar is pre-rendered", () => {
+    const withAt = getStatusFrames(bones({ species: "capybara", eye: "@" }));
+    const withDot = getStatusFrames(bones({ species: "capybara", eye: "·" }));
+    expect(withAt.frames[0]).toBe(withDot.frames[0]);
+    expect(withAt.frames[0]).not.toContain("{E}");
+  });
+
+  test("blink frame reuses the same implanted bitmap art", () => {
     const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
-    expect(frames[0]).toContain("@");
-    expect(frames[0]).not.toContain("{E}");
+    expect(frames[3]).toBe(frames[0]);
   });
 
-  test("blink frame (index 3) replaces the configured eye with '-'", () => {
-    const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
-    expect(frames[3]).not.toContain("@");
-    expect(frames[3]).toContain("-");
-  });
-
-  test("hat overlays line 0 when the species frame has no line-0 content", () => {
-    // duck's frame 0 line 0 is blank — hat should appear there.
-    const { frames } = getStatusFrames(bones({ species: "duck", hat: "crown" }));
-    const line0 = frames[0].split("\n")[0];
-    expect(line0).toContain("\\^^^/");
-  });
-
-  test("hat does not override species line-0 content", () => {
-    // capybara frame 2 has ripples on line 0 — hat should not replace them.
-    const { frames } = getStatusFrames(bones({ species: "capybara", hat: "crown" }));
-    const line0 = frames[2].split("\n")[0];
-    expect(line0).not.toContain("\\^^^/");
-    expect(line0).toContain("~");
+  test("hat overlays are ignored because the implanted avatar fully occupies line 0", () => {
+    const plain = getStatusFrames(bones({ species: "duck", hat: "none" }));
+    const withHat = getStatusFrames(bones({ species: "duck", hat: "crown" }));
+    expect(withHat.frames[0]).toBe(plain.frames[0]);
   });
 
   test("frame sequence references only valid frame indices", () => {

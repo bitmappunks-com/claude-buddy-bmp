@@ -169,11 +169,18 @@ fi
 
 # ─── Build all art lines ──────────────────────────────────────────────────────
 # ART_LINES comes from the pre-rendered frame (already includes hat + blink).
-# Center the name under the art. Frames are 12 cols wide (see server/art.ts),
-# so the geometric center sits at col 6.
-NAME_LEN=${#NAME}
-ART_CENTER=6
-NAME_PAD=$(( ART_CENTER - NAME_LEN / 2 ))
+# The implanted BitmapPunks avatar is much wider than the original ASCII buddy,
+# so derive the visual width from the current frame instead of hardcoding 12 cols.
+ART_W=0
+for line in "${ART_LINES[@]}"; do
+    plain=$(printf '%s' "$line" | perl -pe 's/\e\[[0-9;]*m//g')
+    lw=${#plain}
+    [ "$lw" -gt "$ART_W" ] && ART_W=$lw
+done
+[ "$ART_W" -le 0 ] && ART_W=14
+NAME_W=${#NAME}
+ART_CENTER=$(( ART_W / 2 ))
+NAME_PAD=$(( ART_CENTER - NAME_W / 2 ))
 [ "$NAME_PAD" -lt 0 ] && NAME_PAD=0
 NAME_LINE="$(printf '%*s%s' "$NAME_PAD" '' "$NAME")"
 
@@ -193,7 +200,6 @@ for line in "${ART_LINES[@]}"; do
 done
 ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$DIM")
 
-ART_W=14
 ART_COUNT=${#ALL_LINES[@]}
 
 # ─── Speech bubble (left of art, word-wrapped) ──────────────────────────────

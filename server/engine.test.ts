@@ -294,16 +294,16 @@ describe("generateBones", () => {
 // ─── renderFace ────────────────────────────────────────────────────────────
 
 describe("renderFace", () => {
-  test("substitutes {E} with the eye glyph", () => {
-    expect(renderFace("turtle", "·")).toBe("[·_·]");
-    expect(renderFace("cat", "×")).toBe("=×ω×=");
+  test("returns the generic implanted bitmap marker using the eye glyph", () => {
+    expect(renderFace("turtle", "·")).toBe("▣·▣");
+    expect(renderFace("cat", "×")).toBe("▣×▣");
   });
 
-  test("uses the right template per species", () => {
+  test("uses the same marker regardless of species", () => {
     const eye = "·";
-    expect(renderFace("duck", eye)).toBe("(·>");
-    expect(renderFace("blob", eye)).toBe("(··)");
-    expect(renderFace("robot", eye)).toBe("[··]");
+    expect(renderFace("duck", eye)).toBe("▣·▣");
+    expect(renderFace("blob", eye)).toBe("▣·▣");
+    expect(renderFace("robot", eye)).toBe("▣·▣");
   });
 
   test("never leaves a literal {E} in the output", () => {
@@ -339,7 +339,7 @@ describe("renderCompact", () => {
   test("includes the buddy name and face", () => {
     const out = renderCompact(bones, "Sesame");
     expect(out).toContain("Sesame");
-    expect(out).toContain("[·_·]");
+    expect(out).toContain("▣·▣");
   });
 
   test("appends the reaction bubble when provided", () => {

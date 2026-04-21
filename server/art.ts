@@ -6,122 +6,17 @@
  * {E} is replaced with the eye character at render time.
  */
 
-import type { Species, Eye, Hat, Rarity, StatName, BuddyBones } from "./engine.ts";
+import { SPECIES, type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
+import { HELLO_BITMAPPUNK_FRAMES } from "./bitmappunk-avatar.ts";
 
 // ─── Species art: 3 frames × 5 lines each ──────────────────────────────────
 
-export const SPECIES_ART: Record<Species, string[][]> = {
-  duck: [
-    ["            ", "    __      ", "  <({E} )___  ", "   (  ._>   ", "    `--'    "],
-    ["            ", "    __      ", "  <({E} )___  ", "   (  ._>   ", "    `--'~   "],
-    ["            ", "    __      ", "  <({E} )___  ", "   (  .__>  ", "    `--'    "],
-  ],
-  goose: [
-    ["            ", "     ({E}>    ", "     ||     ", "   _(__)_   ", "    ^^^^    "],
-    ["            ", "    ({E}>     ", "     ||     ", "   _(__)_   ", "    ^^^^    "],
-    ["            ", "     ({E}>>   ", "     ||     ", "   _(__)_   ", "    ^^^^    "],
-  ],
-  blob: [
-    ["            ", "   .----.   ", "  ( {E}  {E} )  ", "  (      )  ", "   `----'   "],
-    ["            ", "  .------.  ", " (  {E}  {E}  ) ", " (        ) ", "  `------'  "],
-    ["            ", "    .--.    ", "   ({E}  {E})   ", "   (    )   ", "    `--'    "],
-  ],
-  cat: [
-    ["            ", "   /\\_/\\    ", "  ( {E}   {E})  ", "  (  \u03c9  )   ", "  (\")_(\")   "],
-    ["            ", "   /\\_/\\    ", "  ( {E}   {E})  ", "  (  \u03c9  )   ", "  (\")_(\")~  "],
-    ["            ", "   /\\-/\\    ", "  ( {E}   {E})  ", "  (  \u03c9  )   ", "  (\")_(\")   "],
-  ],
-  dragon: [
-    ["            ", "  /^\\  /^\\  ", " <  {E}  {E}  > ", " (   ~~   ) ", "  `-vvvv-'  "],
-    ["            ", "  /^\\  /^\\  ", " <  {E}  {E}  > ", " (        ) ", "  `-vvvv-'  "],
-    ["   ~    ~   ", "  /^\\  /^\\  ", " <  {E}  {E}  > ", " (   ~~   ) ", "  `-vvvv-'  "],
-  ],
-  octopus: [
-    ["            ", "   .----.   ", "  ( {E}  {E} )  ", "  (______)  ", "  /\\/\\/\\/\\  "],
-    ["            ", "   .----.   ", "  ( {E}  {E} )  ", "  (______)  ", "  \\/\\/\\/\\/  "],
-    ["     o      ", "   .----.   ", "  ( {E}  {E} )  ", "  (______)  ", "  /\\/\\/\\/\\  "],
-  ],
-  owl: [
-    ["            ", "   /\\  /\\   ", "  (({E})({E}))  ", "  (  ><  )  ", "   `----'   "],
-    ["            ", "   /\\  /\\   ", "  (({E})({E}))  ", "  (  ><  )  ", "   .----.   "],
-    ["            ", "   /\\  /\\   ", "  (({E})(-))  ", "  (  ><  )  ", "   `----'   "],
-  ],
-  penguin: [
-    ["            ", "  .---.     ", "  ({E}>{E})     ", " /(   )\\    ", "  `---'     "],
-    ["            ", "  .---.     ", "  ({E}>{E})     ", " |(   )|    ", "  `---'     "],
-    ["  .---.     ", "  ({E}>{E})     ", " /(   )\\    ", "  `---'     ", "   ~ ~      "],
-  ],
-  turtle: [
-    ["            ", "   _,--._   ", "  ( {E}  {E} )  ", " /[______]\\ ", "  ``    ``  "],
-    ["            ", "   _,--._   ", "  ( {E}  {E} )  ", " /[______]\\ ", "   ``  ``   "],
-    ["            ", "   _,--._   ", "  ( {E}  {E} )  ", " /[======]\\ ", "  ``    ``  "],
-  ],
-  snail: [
-    ["            ", " {E}    .--.  ", "  \\  ( @ )  ", "   \\_`--'   ", "  ~~~~~~~   "],
-    ["            ", "  {E}   .--.  ", "  |  ( @ )  ", "   \\_`--'   ", "  ~~~~~~~   "],
-    ["            ", " {E}    .--.  ", "  \\  ( @  ) ", "   \\_`--'   ", "   ~~~~~~   "],
-  ],
-  ghost: [
-    ["            ", "   .----.   ", "  / {E}  {E} \\  ", "  |      |  ", "  ~`~``~`~  "],
-    ["            ", "   .----.   ", "  / {E}  {E} \\  ", "  |      |  ", "  `~`~~`~`  "],
-    ["    ~  ~    ", "   .----.   ", "  / {E}  {E} \\  ", "  |      |  ", "  ~~`~~`~~  "],
-  ],
-  axolotl: [
-    ["            ", "}~(______)~{", "}~({E} .. {E})~{", "  ( .--. )  ", "  (_/  \\_)  "],
-    ["            ", "~}(______){~", "~}({E} .. {E}){~", "  ( .--. )  ", "  (_/  \\_)  "],
-    ["            ", "}~(______)~{", "}~({E} .. {E})~{", "  (  --  )  ", "  ~_/  \\_~  "],
-  ],
-  capybara: [
-    ["            ", "  n______n  ", " ( {E}    {E} ) ", " (   oo   ) ", "  `------'  "],
-    ["            ", "  n______n  ", " ( {E}    {E} ) ", " (   Oo   ) ", "  `------'  "],
-    ["    ~  ~    ", "  u______n  ", " ( {E}    {E} ) ", " (   oo   ) ", "  `------'  "],
-  ],
-  cactus: [
-    ["            ", " n  ____  n ", " | |{E}  {E}| | ", " |_|    |_| ", "   |    |   "],
-    ["            ", "    ____    ", " n |{E}  {E}| n ", " |_|    |_| ", "   |    |   "],
-    [" n        n ", " |  ____  | ", " | |{E}  {E}| | ", " |_|    |_| ", "   |    |   "],
-  ],
-  robot: [
-    ["            ", "   .[||].   ", "  [ {E}  {E} ]  ", "  [ ==== ]  ", "  `------'  "],
-    ["            ", "   .[||].   ", "  [ {E}  {E} ]  ", "  [ -==- ]  ", "  `------'  "],
-    ["     *      ", "   .[||].   ", "  [ {E}  {E} ]  ", "  [ ==== ]  ", "  `------'  "],
-  ],
-  rabbit: [
-    ["            ", "   (\\__/)   ", "  ( {E}  {E} )  ", " =(  ..  )= ", "  (\")__(\")" ],
-    ["            ", "   (|__/)   ", "  ( {E}  {E} )  ", " =(  ..  )= ", "  (\")__(\")" ],
-    ["            ", "   (\\__/)   ", "  ( {E}  {E} )  ", " =( .  . )= ", "  (\")__(\")" ],
-  ],
-  mushroom: [
-    ["            ", " .-o-OO-o-. ", "(__________)","   |{E}  {E}|   ", "   |____|   "],
-    ["            ", " .-O-oo-O-. ", "(__________)","   |{E}  {E}|   ", "   |____|   "],
-    ["   . o  .   ", " .-o-OO-o-. ", "(__________)","   |{E}  {E}|   ", "   |____|   "],
-  ],
-  chonk: [
-    ["            ", "  /\\    /\\  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'  "],
-    ["            ", "  /\\    /|  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'  "],
-    ["            ", "  /\\    /\\  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'~ "],
-  ],
-  wyvern: [
-    ["}       {", 
-     "|\\^```^/|",
-     "\\ {E}' '{E} /", 
-     " \\ } { /",
-     " ≈(° °)≈",
-     "   '-'"],
-    ["}       {", 
-     "|\\^```^/|",
-     "\\ {E}' '{E} /", 
-     " \\ } { /",
-     " ≈(° °)≈",
-     "  \x1b[38;2;255;120;0m//|\\\\\x1b[0m"],
-    ["}       {", 
-     "|\\^```^/|",
-     "\\ {E}' '{E} /", 
-     " \\ } { /",
-     " ≈(° °)≈",
-     "   'v'"],
-  ]
-};
+export const SPECIES_ART: Record<Species, string[][]> = Object.fromEntries(
+  SPECIES.map((species) => [
+    species,
+    HELLO_BITMAPPUNK_FRAMES.map((frame) => frame.map((line) => line)),
+  ]),
+) as Record<Species, string[][]>;
 
 // ─── Hat art ────────────────────────────────────────────────────────────────
 
@@ -286,9 +181,10 @@ export function renderCompanionCard(
   const shiny = bones.shiny ? `${SHINY_COLOR}\u2728 ${NC}` : "";
   const art = getArtFrame(bones.species, bones.eye, frame);
   applyHat(bones.species, bones.hat, art);
+  const artWidth = art.reduce((max, line) => Math.max(max, displayWidth(line)), 0);
 
   // Build the card
-  const W = Math.max(24, width);
+  const W = Math.max(24, width, artWidth + 4);
   const hr = "\u2500".repeat(W - 2);
   const lines: string[] = [];
 
@@ -416,10 +312,9 @@ export function renderCompanionCardMarkdown(
   parts.push(`### ${dot} ${name} · \`${bones.rarity.toUpperCase()} ${bones.species}\` · ${stars}${shiny}`);
   parts.push("");
 
-  // ASCII art in a code block (preserves monospaced formatting)
-  parts.push("```");
-  parts.push(artLines.join("\n"));
-  parts.push("```");
+  // ANSI bitmap art does not render cleanly in Claude's markdown UI.
+  parts.push(`**Avatar:** BitmapPunks seed \`hello\``);
+  parts.push(artLines.length > 0 ? `_terminal preview: ${artLines.length} rows of ANSI bitmap art_` : "");
   parts.push("");
 
   // Identity line
@@ -455,7 +350,7 @@ export function renderStatusLine(
   name: string,
   reaction?: string,
 ): string {
-  const face = SPECIES_ART[bones.species][0][2]?.replace(/\{E\}/g, bones.eye).trim() || "(?)";
+  const face = "bitmap:hello";
   const color = RARITY_COLOR[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? "\u2728" : "";
