@@ -89,7 +89,7 @@ describe("getStatusFrames", () => {
       for (const body of frames) {
         const lines = body.split("\n");
         expect(lines).toHaveLength(HELLO_BITMAPPUNK_FRAME.length);
-        expect(body).toContain("\x1b[38;2;");
+        expect(body).toMatch(/\x1b\[(?:38|48);(?:2|5);/);
       }
     }
   });

@@ -7,7 +7,11 @@
  */
 
 import { SPECIES, type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
-import { HELLO_BITMAPPUNK_FRAMES } from "./bitmappunk-avatar.ts";
+import {
+  HELLO_BITMAPPUNK_FRAMES,
+  HELLO_BITMAPPUNK_FRAMES_HALFBLOCK,
+  HELLO_BITMAPPUNK_FRAMES_FULLCELL,
+} from "./bitmappunk-avatar.ts";
 
 // ─── Species art: 3 frames × 5 lines each ──────────────────────────────────
 
@@ -15,6 +19,20 @@ export const SPECIES_ART: Record<Species, string[][]> = Object.fromEntries(
   SPECIES.map((species) => [
     species,
     HELLO_BITMAPPUNK_FRAMES.map((frame) => frame.map((line) => line)),
+  ]),
+) as Record<Species, string[][]>;
+
+const SPECIES_ART_HALFBLOCK: Record<Species, string[][]> = Object.fromEntries(
+  SPECIES.map((species) => [
+    species,
+    HELLO_BITMAPPUNK_FRAMES_HALFBLOCK.map((frame) => frame.map((line) => line)),
+  ]),
+) as Record<Species, string[][]>;
+
+const SPECIES_ART_FULLCELL: Record<Species, string[][]> = Object.fromEntries(
+  SPECIES.map((species) => [
+    species,
+    HELLO_BITMAPPUNK_FRAMES_FULLCELL.map((frame) => frame.map((line) => line)),
   ]),
 ) as Record<Species, string[][]>;
 
@@ -143,27 +161,41 @@ export const STATUS_FRAME_SEQUENCE: readonly number[] = [
 // Pre-resolves eye, hat overlay, and blink so the statusline shell does no art
 // work — it just cycles whatever frames the server writes. Each frame is a
 // \n-joined 5-line string (one jq call + mapfile in bash).
+//
+// Both halfblock and fullcell variants are emitted: the statusline shell reads
+// its own $TERM_PROGRAM and picks. That is how a single shared status.json
+// supports multiple terminals concurrently without locking in the first one's
+// env.
 export function getStatusFrames(bones: BuddyBones): {
   frames: string[];
+  framesHalfblock: string[];
+  framesFullcell: string[];
   frameSequence: number[];
 } {
-  const resolveFrame = (frameIdx: number, eye: string): string => {
-    const raw = SPECIES_ART[bones.species][frameIdx];
-    const art = raw.map((line) => line.replace(/\{E\}/g, eye));
-    const hatLine = HAT_ART[bones.hat];
-    if (hatLine && !art[0].trim()) {
-      art[0] = hatLine;
-    }
-    return art.join("\n");
+  const resolveFrame =
+    (src: Record<Species, string[][]>) =>
+    (frameIdx: number, eye: string): string => {
+      const raw = src[bones.species][frameIdx];
+      const art = raw.map((line) => line.replace(/\{E\}/g, eye));
+      const hatLine = HAT_ART[bones.hat];
+      if (hatLine && !art[0].trim()) {
+        art[0] = hatLine;
+      }
+      return art.join("\n");
+    };
+
+  const build = (src: Record<Species, string[][]>): string[] => {
+    const r = resolveFrame(src);
+    return [r(0, bones.eye), r(1, bones.eye), r(2, bones.eye), r(0, "-")];
   };
 
+  const framesHalfblock = build(SPECIES_ART_HALFBLOCK);
+  const framesFullcell = build(SPECIES_ART_FULLCELL);
+
   return {
-    frames: [
-      resolveFrame(0, bones.eye),
-      resolveFrame(1, bones.eye),
-      resolveFrame(2, bones.eye),
-      resolveFrame(0, "-"),
-    ],
+    frames: build(SPECIES_ART),
+    framesHalfblock,
+    framesFullcell,
     frameSequence: [...STATUS_FRAME_SEQUENCE],
   };
 }

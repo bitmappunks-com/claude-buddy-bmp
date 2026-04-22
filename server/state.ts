@@ -360,6 +360,8 @@ export interface StatusState {
   muted: boolean;
   achievement: string;
   frames: string[];
+  framesHalfblock: string[];
+  framesFullcell: string[];
   frameSequence: number[];
 }
 
@@ -374,7 +376,8 @@ export function writeStatusState(
     require("./engine.ts") as typeof import("./engine.ts");
   const { getStatusFrames } =
     require("./art.ts") as typeof import("./art.ts");
-  const { frames, frameSequence } = getStatusFrames(companion.bones);
+  const { frames, framesHalfblock, framesFullcell, frameSequence } =
+    getStatusFrames(companion.bones);
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
@@ -388,6 +391,8 @@ export function writeStatusState(
     muted: muted ?? false,
     achievement: achievement ?? "",
     frames,
+    framesHalfblock,
+    framesFullcell,
     frameSequence,
   };
   writeFileSync(join(STATE_DIR, "status.json"), JSON.stringify(state));

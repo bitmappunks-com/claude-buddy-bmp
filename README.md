@@ -75,7 +75,6 @@
 ## 📋 Requirements
 
 - **[bun](https://bun.sh/install)** on `PATH` — claude-buddy's MCP server runs on bun. Install once: `curl -fsSL https://bun.sh/install | bash`
-- **[chafa](https://hpjansson.org/chafa/)** on `PATH` — required for avatar rendering in the terminal/status line. Install once: `brew install chafa` or `sudo apt-get install -y chafa`
 - **Claude Code v2.1.80+**
 - **Linux or macOS** (Windows is experimental)
 
@@ -85,7 +84,6 @@
 git clone https://github.com/1270011/claude-buddy
 cd claude-buddy
 bun install
-brew install chafa   # or: sudo apt-get install -y chafa
 bun run install-buddy
 ```
 

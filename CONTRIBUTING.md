@@ -11,7 +11,6 @@ you need: setup, DCO sign-off, tests, and what happens when you open a PR.
 git clone https://github.com/1270011/claude-buddy.git
 cd claude-buddy
 bun install
-brew install chafa   # or: sudo apt-get install -y chafa
 bun run install-buddy
 ```
 

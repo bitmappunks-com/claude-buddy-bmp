@@ -38,11 +38,35 @@ ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 
 cat > /dev/null  # drain stdin
 
+# ─── Render-mode detection (per terminal) ──────────────────────────────────
+# status.json carries both halfblock and fullcell pre-rendered frames. Each
+# shell invocation picks the variant matching its own $TERM_PROGRAM, so
+# multiple terminals sharing one status.json each render correctly.
+if [ -n "$BUDDY_AVATAR_RENDER" ]; then
+    RENDER_MODE="$BUDDY_AVATAR_RENDER"
+else
+    TP=$(printf '%s' "${TERM_PROGRAM:-}" | tr '[:upper:]' '[:lower:]')
+    TE=$(printf '%s' "${TERM:-}" | tr '[:upper:]' '[:lower:]')
+    case "$TP" in
+        iterm.app|wezterm|ghostty|alacritty)
+            RENDER_MODE="halfblock" ;;
+        *)
+            case "$TE" in
+                *kitty*|*alacritty*) RENDER_MODE="halfblock" ;;
+                *)                   RENDER_MODE="fullcell"  ;;
+            esac
+            ;;
+    esac
+fi
+
+FRAME_FIELD=".framesFullcell"
+[ "$RENDER_MODE" = "halfblock" ] && FRAME_FIELD=".framesHalfblock"
+
 # ─── Animation: pick current frame from server-rendered frames ──────────────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
-FRAME_BODY=$(jq -r --argjson now "$NOW" '
+FRAME_BODY=$(jq -r --argjson now "$NOW" --arg field "$FRAME_FIELD" '
     .frameSequence[$now % (.frameSequence | length)] as $idx
-    | .frames[$idx] // ""
+    | (getpath($field | ltrimstr(".") | split(".")) // .frames)[$idx] // ""
 ' "$STATE" 2>/dev/null)
 
 # Fallback when status.json lacks .frames — e.g. server/bash version skew

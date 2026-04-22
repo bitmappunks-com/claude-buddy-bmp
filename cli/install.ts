@@ -79,21 +79,6 @@ function preflight(): boolean {
     }
   }
 
-  // Check chafa (required for avatar rendering)
-  try {
-    execSync("chafa --version", { stdio: "ignore" });
-    ok("chafa found");
-  } catch {
-    warn("chafa not found — installing...");
-    try {
-      execSync("sudo apt-get install -y chafa 2>/dev/null || brew install chafa 2>/dev/null", { stdio: "ignore" });
-      ok("chafa installed");
-    } catch {
-      err("Could not install chafa. Install manually: apt install chafa / brew install chafa");
-      pass = false;
-    }
-  }
-
   // Check Claude config dir exists
   if (!existsSync(CLAUDE_DIR)) {
     err(`${CLAUDE_DIR} not found. Start Claude Code once first, then re-run.`);
