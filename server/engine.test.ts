@@ -19,6 +19,7 @@ import {
   hashString,
   mulberry32,
   generateBones,
+  generatePersonality,
   renderFace,
   renderCompact,
   type BuddyBones,
@@ -288,6 +289,23 @@ describe("generateBones", () => {
     const customB = generateBones("golden-user-alpha", "custom-salt-v1");
     expect(customA).toEqual(customB);
     expect(customA).not.toEqual(defaultSalt);
+  });
+  test("generated personality describes a companion, not the legacy animal species", () => {
+    const bones: BuddyBones = {
+      rarity: "legendary",
+      species: "ghost",
+      eye: "◉",
+      hat: "none",
+      shiny: false,
+      stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
+      peak: "DEBUGGING",
+      dump: "PATIENCE",
+    };
+
+    const personality = generatePersonality(bones, "abcdef0123456789");
+
+    expect(personality).toContain("legendary companion");
+    expect(personality).not.toContain("legendary ghost");
   });
 });
 

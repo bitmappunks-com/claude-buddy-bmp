@@ -11,10 +11,11 @@ import { join } from "path";
 import {
   displayWidth,
   getStatusFrames,
+  renderCompanionCard,
   renderCompanionCardMarkdown,
   renderStatusLine,
 } from "./art.ts";
-import { DEFAULT_BITMAP_FRAME, listBitmapBaseTraits } from "./bitmappunk-avatar.ts";
+import { DEFAULT_BITMAP_FRAME, bitmapBaseLabelForKey, listBitmapBaseTraits } from "./bitmappunk-avatar.ts";
 import { SPECIES, type BuddyBones } from "./engine.ts";
 import { saveConfig, saveReaction } from "./state.ts";
 
@@ -167,7 +168,7 @@ describe("getStatusFrames", () => {
 });
 
 describe("render metadata", () => {
-  const bones = (): BuddyBones => ({
+  const bones = (overrides: Partial<BuddyBones> = {}): BuddyBones => ({
     rarity: "common",
     species: "capybara",
     eye: "°",
@@ -176,6 +177,26 @@ describe("render metadata", () => {
     stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
     peak: "DEBUGGING",
     dump: "PATIENCE",
+    ...overrides,
+  });
+
+  test("terminal card shows the pet BitmapPunks base and hides legacy species/eye/hat metadata", () => {
+    const bitmapBase = "100-solana_male";
+    const card = renderCompanionCard(
+      bones({ rarity: "legendary", species: "ghost", eye: "◉", hat: "none" }),
+      "Waffle",
+      "Keeps watch.",
+      undefined,
+      0,
+      64,
+      bitmapBase,
+    );
+
+    expect(card).toContain("LEGENDARY");
+    expect(card).toContain(bitmapBaseLabelForKey(bitmapBase));
+    expect(card).not.toContain("LEGENDARY ghost");
+    expect(card).not.toContain("eye:");
+    expect(card).not.toContain("hat:");
   });
 
   test("markdown card names the active BitmapPunks base instead of the old hello seed", () => {

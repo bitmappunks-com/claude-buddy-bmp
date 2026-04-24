@@ -7,7 +7,7 @@
  */
 
 import { type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
-import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
+import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, bitmapBaseLabelForKey, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
 import { loadReaction } from "./state.ts";
 
 function currentBitmapBase(requestedBase?: string): string {
@@ -205,13 +205,10 @@ export function renderCompanionCard(
   const nameStarsRaw = `${BOLD}${name}${NC}  ${color}${stars}${NC}`;
   lines.push(`${color}\u2502${NC}  ${nameStarsRaw}${" ".repeat(Math.max(0, innerW - displayWidth(name) - 2 - displayWidth(stars)))}${color}\u2502${NC}`);
 
-  const rarityRaw = `${shiny}${color}${BOLD}${bones.rarity.toUpperCase()}${NC} ${bones.species}`;
-  const rarityVis = (bones.shiny ? 3 : 0) + bones.rarity.length + 1 + bones.species.length;
+  const baseLabel = bitmapBaseLabelForKey(bitmapBase);
+  const rarityRaw = `${shiny}${color}${BOLD}${bones.rarity.toUpperCase()}${NC} ${baseLabel}`;
+  const rarityVis = (bones.shiny ? 3 : 0) + bones.rarity.length + 1 + displayWidth(baseLabel);
   lines.push(`${color}\u2502${NC}  ${rarityRaw}${" ".repeat(Math.max(0, innerW - rarityVis))}${color}\u2502${NC}`);
-
-  // Eye + Hat info
-  const cosmeticLine = `eye: ${bones.eye}  hat: ${bones.hat}`;
-  lines.push(`${color}\u2502${NC}  ${DIM}${cosmeticLine}${NC}${" ".repeat(Math.max(0, innerW - displayWidth(cosmeticLine)))}${color}\u2502${NC}`);
 
   // Separator
   lines.push(`${color}\u251c${"╌".repeat(W - 2)}\u2524${NC}`);

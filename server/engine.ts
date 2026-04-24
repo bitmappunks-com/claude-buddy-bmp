@@ -375,7 +375,7 @@ export function generatePersonality(bones: BuddyBones, userId: string): string {
   const dump   = pickPhrase(DUMP_PHRASES[bones.dump], 1);
   const closer = pickPhrase(RARITY_CLOSER[bones.rarity] ?? ["Gets the job done."], 2);
 
-  return `A ${bones.rarity} ${bones.species} that ${peak}.${shiny} ${closer} Though it ${dump}.`;
+  return `A ${bones.rarity} companion that ${peak}.${shiny} ${closer} Though it ${dump}.`;
 }
 
 // ─── ASCII Art ──────────────────────────────────────────────────────────────
