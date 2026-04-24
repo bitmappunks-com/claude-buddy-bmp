@@ -147,6 +147,16 @@ describe("getStatusFrames", () => {
     expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(succeededItem);
     expect(succeededItem).not.toBe(erroredItem);
   });
+
+  test("legacy explicit item config is ignored so statusline items remain automatic", () => {
+    saveConfig({ activeBitmapItem: "1-420" });
+    saveReaction("*quietly celebrates*", "all-green");
+
+    const succeeded = getStatusFrames(bones());
+
+    expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(succeeded.bitmapItem!);
+    expect(succeeded.bitmapItem).not.toBe("1-420");
+  });
 });
 
 describe("render metadata", () => {

@@ -36,7 +36,7 @@ describe("cli base command", () => {
 
     const status = JSON.parse(readFileSync(statusPath, "utf8"));
     expect(status.bitmapBase).toBe("100-solana_male");
-    expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(status.bitmapItem);
+    expect(status.bitmapItem).toBe("auto");
     expect(status.frames.length).toBeGreaterThan(0);
     expect(status.frameSequence.length).toBeGreaterThan(3);
   });

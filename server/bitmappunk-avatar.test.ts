@@ -227,6 +227,16 @@ describe("buildBitmapStatusArt", () => {
     expect(first.frameSequence).not.toEqual(second.frameSequence);
   });
 
+  test("auto idle status frames include multiple item animations instead of only smoking", () => {
+    const auto = buildBitmapStatusArt("100-solana_male", "auto", undefined, 0);
+    const smokingOnly = buildBitmapStatusArt("100-solana_male", "1-420", undefined, 0);
+    const smokingFrames = new Set(smokingOnly.frames.slice(4));
+
+    expect(auto.frames).toHaveLength(12);
+    expect(auto.frames.slice(4).some((frame) => !smokingFrames.has(frame))).toBe(true);
+    expect(auto.frameSequence.some((idx) => idx >= 4)).toBe(true);
+  });
+
   test("uses different reaction-specific sequence profiles for adjacent time buckets", () => {
     const first = buildBitmapStatusArt("100-solana_male", "auto", "lint-fail", 0);
     const second = buildBitmapStatusArt("100-solana_male", "auto", "lint-fail", 1);

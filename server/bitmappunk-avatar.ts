@@ -340,6 +340,20 @@ function buildItemBurstSequence(itemIndices: number[], seed: number, count: numb
   });
 }
 
+function shouldUseMixedIdleItems(requestedItem: string, reason?: string): boolean {
+  return (!requestedItem || requestedItem === "auto") && !normalizedBitmapReason(reason);
+}
+
+function composeMixedIdleItemFrames(baseKey: string, seed: number, frameCount: number = 8): BitmapCanvas[] {
+  const start = Math.abs(seed) % IDLE_ITEM_POOL.length;
+  return Array.from({ length: frameCount }, (_, index) => {
+    const itemKey = IDLE_ITEM_POOL[(start + Math.floor(index / 2)) % IDLE_ITEM_POOL.length]!;
+    const itemFrames = composeBitmapItemFrames(baseKey, itemKey);
+    const frameIndex = Math.abs(seed + index) % itemFrames.length;
+    return itemFrames[frameIndex]!;
+  });
+}
+
 export function resolveBitmapBaseSelection(requestedBase?: string): string {
   const trimmed = requestedBase?.trim();
   if (!trimmed || normalizeBitmapLookup(trimmed) === "default") {
@@ -678,7 +692,10 @@ export function buildBitmapStatusArt(
   const idle = composeBaseCanvas(trait);
   const move = applyBitmapAction(trait.key, "move")[1];
   const blink = applyBitmapAction(trait.key, "blink")[1];
-  const itemCanvases = composeBitmapItemFrames(trait.key, resolvedItem);
+  const useMixedIdleItems = shouldUseMixedIdleItems(requestedItem, reason);
+  const itemCanvases = useMixedIdleItems
+    ? composeMixedIdleItemFrames(trait.key, animationSeed)
+    : composeBitmapItemFrames(trait.key, resolvedItem);
   const canvases = [idle, move, cloneCanvas(idle), blink, ...itemCanvases];
   const framesHalfblock = canvases.map((canvas) => renderCanvas(canvas, "halfblock").join("\n"));
   const framesFullcell = canvases.map((canvas) => renderCanvas(canvas, "fullcell").join("\n"));
@@ -689,7 +706,7 @@ export function buildBitmapStatusArt(
 
   return {
     bitmapBase: trait.key,
-    bitmapItem: resolvedItem,
+    bitmapItem: useMixedIdleItems ? "auto" : resolvedItem,
     frames: mode === "halfblock" ? [...framesHalfblock] : [...framesFullcell],
     framesHalfblock,
     framesFullcell,

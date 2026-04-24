@@ -7,7 +7,7 @@
  */
 
 import { type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
-import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, DEFAULT_BITMAP_ITEM, resolveBitmapBaseSelection, resolveBitmapItemSelection } from "./bitmappunk-avatar.ts";
+import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, DEFAULT_BITMAP_ITEM, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
 import { loadConfig, loadReaction } from "./state.ts";
 
 function currentBitmapBase(): string {
@@ -19,13 +19,10 @@ function currentBitmapBase(): string {
 }
 
 function currentBitmapItem(): string {
-  const configured = loadConfig().activeBitmapItem;
-  if (!configured || configured === "auto") return DEFAULT_BITMAP_ITEM;
-  try {
-    return resolveBitmapItemSelection(configured);
-  } catch {
-    return DEFAULT_BITMAP_ITEM;
-  }
+  // ITEM is intentionally not user-selectable. Older configs may still contain
+  // explicit item keys from pre-auto builds; ignore them so runtime status art
+  // always flows through behavior/time-seeded automatic item selection.
+  return DEFAULT_BITMAP_ITEM;
 }
 
 function currentBitmapReactionContext(): { reason?: string; seed: number } {
