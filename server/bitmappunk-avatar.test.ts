@@ -89,14 +89,28 @@ describe("bitmap item selection", () => {
     expect(resolveBitmapItemSelection("1749-sleep_bubble", "error", 7)).toBe("1749-sleep_bubble");
   });
 
-  test("maps error-like reasons to a themed item when auto mode is used", () => {
-    const chosen = resolveBitmapItemSelection("auto", "error", 0);
-    expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosen);
+  test("maps all quality failure reasons to a themed error item when auto mode is used", () => {
+    for (const reason of ["error", "test-fail", "lint-fail", "type-error", "build-fail", "security-warning", "deprecation", "merge-conflict"] as const) {
+      const chosen = resolveBitmapItemSelection("auto", reason, 0);
+      expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosen);
+    }
   });
 
   test("maps build/release success reasons to an upbeat item when auto mode is used", () => {
     const chosen = resolveBitmapItemSelection("auto", "all-green", 1);
     expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(chosen);
+  });
+
+  test("maps file-work reasons to a fire animation pool when auto mode is used", () => {
+    for (const reason of ["regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file", "env-file", "test-file", "config-file", "makefile", "package-file", "proto-file"] as const) {
+      const chosen = resolveBitmapItemSelection("auto", reason, 2);
+      expect(["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"]).toContain(chosen);
+    }
+  });
+
+  test("keeps churn/editing reasons automatic but distinct from failure and success pools", () => {
+    const chosen = resolveBitmapItemSelection("auto", "debug-loop", 3);
+    expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(chosen);
   });
 
   test("falls back to a deterministic idle pool choice when no reason is provided", () => {
@@ -127,8 +141,17 @@ describe("buildBitmapStatusArt", () => {
     const second = buildBitmapStatusArt("100-solana_male", "1-420", undefined, 1);
 
     expect(first.frameSequence).toEqual([0, 0, 0, 1, 0, 0, 4, 5, 6, 0, 3, 0, 2, 0, 0]);
-    expect(second.frameSequence).toEqual([0, 0, 0, 1, 0, 0, 5, 10, 7, 0, 3, 0, 2, 0, 0]);
+    expect(second.frameSequence).toEqual([0, 0, 1, 0, 0, 3, 5, 10, 7, 0, 2, 0, 0, 0]);
     expect(first.frameSequence).not.toEqual(second.frameSequence);
+  });
+
+  test("uses different reaction-specific sequence profiles for adjacent time buckets", () => {
+    const first = buildBitmapStatusArt("100-solana_male", "auto", "lint-fail", 0);
+    const second = buildBitmapStatusArt("100-solana_male", "auto", "lint-fail", 1);
+
+    expect(first.frameSequence).not.toEqual(second.frameSequence);
+    expect(first.frameSequence.filter((idx) => idx >= 4)).toHaveLength(5);
+    expect(second.frameSequence.filter((idx) => idx >= 4)).toHaveLength(4);
   });
 
   test("preview script renders vendored ANSI art instead of referencing hello.gif assets", () => {

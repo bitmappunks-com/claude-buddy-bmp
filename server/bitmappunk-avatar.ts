@@ -177,10 +177,15 @@ const IDLE_ITEM_POOL = ["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-s
 const ERROR_ITEM_POOL = ["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"] as const;
 const SUCCESS_ITEM_POOL = ["1744-bubble_gum_large", "1749-sleep_bubble"] as const;
 const FIRE_ITEM_POOL = ["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"] as const;
-const ERROR_REASONS = ["error", "test-fail", "type-error", "build-fail", "security-warning", "deprecation", "frustrated", "stuck"] as const;
-const SUCCESS_REASONS = ["all-green", "deploy", "release", "coverage", "happy", "recovery-from-error", "recovery-from-test-fail", "recovery-from-build-fail"] as const;
-const IDLE_REASONS = ["push", "commit", "branch", "rebase", "stash", "tag", "late-night", "long-session", "marathon", "weekend", "monday", "friday"] as const;
-const FIRE_REASONS = ["css-file", "docker-file", "ci-file", "chaos"] as const;
+
+// Mirrors the reaction reason vocabulary used by hooks/server/index.ts. ITEM is
+// still internal-only; these buckets just let automatic selection react to more
+// real buddy behavior instead of falling through to the same idle loop.
+const ERROR_REASONS = ["error", "test-fail", "lint-fail", "type-error", "build-fail", "security-warning", "deprecation", "merge-conflict", "frustrated", "stuck"] as const;
+const SUCCESS_REASONS = ["success", "all-green", "deploy", "release", "coverage", "happy", "recovery-from-error", "recovery-from-test-fail", "recovery-from-build-fail"] as const;
+const CHURN_REASONS = ["large-diff", "many-edits", "delete-file", "large-file", "create-file", "debug-loop", "write-spree", "search-heavy"] as const;
+const IDLE_REASONS = ["hatch", "pet", "name", "turn", "idle", "push", "commit", "branch", "rebase", "stash", "tag", "late-night", "early-morning", "long-session", "marathon", "weekend", "monday", "friday", "sarcastic"] as const;
+const FIRE_REASONS = ["regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file", "env-file", "test-file", "config-file", "makefile", "package-file", "proto-file", "chaos"] as const;
 
 type BitmapAnimationProfile = {
   intro: number[];
@@ -203,38 +208,50 @@ function reasonIn(reason: string, pool: readonly string[]): boolean {
   return pool.includes(reason);
 }
 
-function resolveBitmapAnimationProfile(reason?: string): BitmapAnimationProfile {
+function pickProfile(seed: number, profiles: BitmapAnimationProfile[]): BitmapAnimationProfile {
+  const profile = profiles[Math.abs(seed) % profiles.length]!;
+  return {
+    intro: [...profile.intro],
+    outro: [...profile.outro],
+    itemBurst: profile.itemBurst,
+  };
+}
+
+function resolveBitmapAnimationProfile(reason?: string, seed: number = 0): BitmapAnimationProfile {
   const normalized = normalizedBitmapReason(reason);
 
   if (reasonIn(normalized, ERROR_REASONS)) {
-    return {
-      intro: [0, 3, 0, 1, 0],
-      outro: [3, 0, 2, 0, 0],
-      itemBurst: 5,
-    };
+    return pickProfile(seed, [
+      { intro: [0, 3, 0, 1, 0], outro: [3, 0, 2, 0, 0], itemBurst: 5 },
+      { intro: [0, 1, 3, 0, 3], outro: [0, 2, 0, 3, 0], itemBurst: 4 },
+    ]);
   }
 
   if (reasonIn(normalized, SUCCESS_REASONS)) {
-    return {
-      intro: [0, 1, 0, 1, 0],
-      outro: [0, 2, 0, 0],
-      itemBurst: 4,
-    };
+    return pickProfile(seed, [
+      { intro: [0, 1, 0, 1, 0], outro: [0, 2, 0, 0], itemBurst: 4 },
+      { intro: [0, 2, 0, 1, 0], outro: [0, 1, 0, 0], itemBurst: 3 },
+    ]);
   }
 
   if (reasonIn(normalized, FIRE_REASONS)) {
-    return {
-      intro: [0, 1, 3, 1, 0],
-      outro: [0, 3, 0, 2, 0],
-      itemBurst: 5,
-    };
+    return pickProfile(seed, [
+      { intro: [0, 1, 3, 1, 0], outro: [0, 3, 0, 2, 0], itemBurst: 5 },
+      { intro: [0, 3, 1, 0, 1], outro: [3, 0, 2, 0, 0], itemBurst: 5 },
+    ]);
   }
 
-  return {
-    intro: [0, 0, 0, 1, 0, 0],
-    outro: [0, 3, 0, 2, 0, 0],
-    itemBurst: reasonIn(normalized, IDLE_REASONS) ? 4 : 3,
-  };
+  if (reasonIn(normalized, CHURN_REASONS)) {
+    return pickProfile(seed, [
+      { intro: [0, 1, 0, 3, 0], outro: [0, 1, 0, 2, 0], itemBurst: 4 },
+      { intro: [0, 3, 0, 1, 0], outro: [0, 2, 0, 1, 0], itemBurst: 4 },
+    ]);
+  }
+
+  return pickProfile(seed, [
+    { intro: [0, 0, 0, 1, 0, 0], outro: [0, 3, 0, 2, 0, 0], itemBurst: reasonIn(normalized, IDLE_REASONS) ? 4 : 3 },
+    { intro: [0, 0, 1, 0, 0, 3], outro: [0, 2, 0, 0, 0], itemBurst: 3 },
+  ]);
 }
 
 function buildItemBurstSequence(itemIndices: number[], seed: number, count: number): number[] {
@@ -292,7 +309,7 @@ export function resolveBitmapItemSelection(
   if (reasonIn(normalized, SUCCESS_REASONS)) {
     return pickFromPool(SUCCESS_ITEM_POOL, seed);
   }
-  if (reasonIn(normalized, IDLE_REASONS)) {
+  if (reasonIn(normalized, IDLE_REASONS) || reasonIn(normalized, CHURN_REASONS)) {
     return pickFromPool(IDLE_ITEM_POOL, seed);
   }
   if (reasonIn(normalized, FIRE_REASONS)) {
@@ -570,7 +587,7 @@ export function buildBitmapStatusArt(
 ): BitmapStatusArt {
   const trait = loadBitmapBaseTrait(baseKey);
   const resolvedItem = resolveBitmapItemSelection(requestedItem, reason, seed);
-  const profile = resolveBitmapAnimationProfile(reason);
+  const profile = resolveBitmapAnimationProfile(reason, seed);
   const idle = composeBaseCanvas(trait);
   const move = applyBitmapAction(trait.key, "move")[1];
   const blink = applyBitmapAction(trait.key, "blink")[1];
