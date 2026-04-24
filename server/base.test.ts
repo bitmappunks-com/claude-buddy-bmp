@@ -51,7 +51,7 @@ describe("BitmapPunks base UX", () => {
     writeFileSync(join(stateDir, "menagerie.json"), JSON.stringify({ active: "hunt", companions: { hunt: companion } }, null, 2));
 
     const proc = Bun.spawnSync({
-      cmd: ["bash", "-lc", `printf '1\\n11\\n' | "${process.execPath}" run cli/index.ts hunt`],
+      cmd: ["bash", "-lc", `printf '1\\n11\\n1\\nNova\\n' | "${process.execPath}" run cli/index.ts hunt`],
       cwd: join(import.meta.dir, ".."),
       env: {
         ...process.env,
@@ -65,8 +65,10 @@ describe("BitmapPunks base UX", () => {
     const output = Buffer.from(proc.stdout).toString("utf8");
     expect(output).toContain("Gender:");
     expect(output).toContain("Type:");
-    expect(output).toContain("Created");
     expect(output).toContain("(Solana, female)");
+    expect(output).toContain("Rarity:");
+    expect(output).toContain("Name this pet");
+    expect(output).toContain("Created");
     expect(output).not.toContain("86-solana_female");
 
     const afterManifest = JSON.parse(readFileSync(join(stateDir, "menagerie.json"), "utf8"));
@@ -76,7 +78,8 @@ describe("BitmapPunks base UX", () => {
     expect(hunted).toBeTruthy();
     expect(hunted.bitmapBase).toBe("86-solana_female");
     expect(hunted.personality).toEqual(expect.any(String));
-    expect(hunted.name).toEqual(expect.any(String));
+    expect(hunted.name).toBe("Nova");
+    expect(hunted.bones.rarity).toBe("common");
 
     expect(existsSync(join(stateDir, "config.json"))).toBe(false);
 
@@ -94,7 +97,7 @@ describe("BitmapPunks base UX", () => {
     writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "hunt-base-variant-user" }));
 
     const proc = Bun.spawnSync({
-      cmd: ["bash", "-lc", `printf '1\\n3\\n2\\n' | "${process.execPath}" run cli/index.ts hunt`],
+      cmd: ["bash", "-lc", `printf '1\\n3\\n2\\n2\\nBeige\\n' | "${process.execPath}" run cli/index.ts hunt`],
       cwd: join(import.meta.dir, ".."),
       env: {
         ...process.env,

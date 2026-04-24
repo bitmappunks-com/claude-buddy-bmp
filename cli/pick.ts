@@ -20,12 +20,12 @@ import {
   loadCompanionSlot, saveCompanion, saveCompanionSlot, slugify, unusedName, writeStatusState,
 } from "../server/state.ts";
 import {
-  generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
-  type Species, type Rarity, type StatName, type Eye, type Hat,
+  generateBones, generatePersonality, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
+  type Rarity, type StatName, type Eye, type Hat,
   type BuddyBones, type Companion,
 } from "../server/engine.ts";
 import { renderCompanionCard } from "../server/art.ts";
-import { DEFAULT_BITMAP_BASE, listBitmapBaseTraits, pickBitmapBaseForSeed, resolveBitmapBaseSelection } from "../server/bitmappunk-avatar.ts";
+import { DEFAULT_BITMAP_BASE, bitmapBaseLabelForKey, formatBitmapBaseLabel, listBitmapBaseTraits, pickBitmapBaseForSeed, resolveBitmapBaseSelection } from "../server/bitmappunk-avatar.ts";
 import { randomBytes } from "crypto";
 
 // ─── ANSI ─────────────────────────────────────────────────────────────────────
@@ -81,7 +81,6 @@ function rpad(s: string, w: number): string {
 
 // ─── Option lists ─────────────────────────────────────────────────────────────
 
-const SP_OPTS  = ["any", ...SPECIES]    as const;
 const RA_OPTS  = ["any", ...RARITIES]   as const;
 const SH_OPTS  = ["any", "yes", "no"]   as const;
 const ST_OPTS  = ["any", ...STAT_NAMES] as const;
@@ -91,8 +90,11 @@ const MIN_OPTS = ["any", "5", "10", "15", "20", "25", "30", "35", "40", "45",
                   "50", "55", "60", "65", "70", "75", "80", "85", "90", "95"] as const;
 const AVG_OPTS = MIN_OPTS;
 
-const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
-  { label: "Species", opts: SP_OPTS  },
+const BITMAP_BASES = listBitmapBaseTraits();
+const BASE_OPTS = ["any", ...BITMAP_BASES.map((base) => base.key)] as const;
+
+const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[]; render?: (value: string) => string }> = [
+  { label: "Base   ", opts: BASE_OPTS, render: (value) => value === "any" ? "any" : bitmapBaseLabelForKey(value) },
   { label: "Rarity ", opts: RA_OPTS  },
   { label: "Shiny  ", opts: SH_OPTS  },
   { label: "Peak   ", opts: ST_OPTS  },
@@ -111,7 +113,7 @@ const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
 
 type Mode = "saved" | "base" | "criteria" | "searching" | "results" | "naming";
 interface SlotEntry   { slot: string; companion: Companion; }
-interface BuddyResult { userId: string; bones: BuddyBones; }
+interface BuddyResult { userId: string; bones: BuddyBones; bitmapBase?: string; }
 
 interface State {
   mode:          Mode;
@@ -129,8 +131,6 @@ interface State {
   pendingResult: BuddyResult | null;
   message:       string;
 }
-
-const BITMAP_BASES = listBitmapBaseTraits();
 
 function currentBitmapBaseKey(): string {
   try {
@@ -188,8 +188,8 @@ function savedPane(s: State): string[] {
     const star = RARITY_STARS[c.bones.rarity];
     const shiny = c.bones.shiny ? "✨" : "  ";
     const name  = c.name.slice(0, 11).padEnd(11);
-    const sp    = c.bones.species.slice(0, 7).padEnd(7);
-    const row   = ` ${dot} ${clr}${name}${N} ${GR}${sp}${N} ${clr}${star}${N} ${shiny}`;
+    const baseLabel = bitmapBaseLabelForKey(c.bitmapBase).slice(0, 16).padEnd(16);
+    const row   = ` ${dot} ${clr}${name}${N} ${GR}${baseLabel}${N} ${clr}${star}${N} ${shiny}`;
     lines.push(isCursor ? RV + row + N : row);
   }
 
@@ -209,7 +209,7 @@ function basePane(s: State): string[] {
     const isActive = base.key === activeBase;
     const isCursor = i === s.baseCursor;
     const dot = isActive ? `${GN}●${N}` : " ";
-    const label = `${base.key.slice(0, 24).padEnd(24)} ${base.gender.slice(0, 1)}`;
+    const label = `${formatBitmapBaseLabel(base).slice(0, 28).padEnd(28)}`;
     const row = ` ${dot} ${label}`;
     lines.push(isCursor ? RV + row + N : row);
   }
@@ -225,14 +225,17 @@ function criteriaPane(s: State): string[] {
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
 
   for (let i = 0; i < CRITERIA_ROWS.length; i++) {
-    const { label, opts } = CRITERIA_ROWS[i];
+    const row = CRITERIA_ROWS[i];
+    const { label, opts } = row;
     const val     = opts[s.ci[i]];
     const focus   = i === s.criteriaFocus;
     const clr     = RARITY_CLR[val] ?? "";
     const arrow   = focus ? `${YL}>${N}` : " ";
+    const rendered = row.render?.(val) ?? val;
+    const display = rendered.length > 11 ? rendered.slice(0, 11) : rendered.padEnd(11);
     const valDisp = focus
-      ? `${RV}${B} ${val.padEnd(11)} ${N}`
-      : `${D}${clr} ${val.padEnd(11)} ${N}`;
+      ? `${RV}${B} ${display} ${N}`
+      : `${D}${clr} ${display} ${N}`;
     lines.push(`  ${arrow} ${GR}${label}${N}  ${valDisp}  ${GR}←→${N}`);
   }
 
@@ -270,7 +273,8 @@ function resultsPane(s: State): string[] {
     const star   = RARITY_STARS[b.rarity];
     const shiny  = b.shiny ? "✨" : "  ";
     const ra     = b.rarity.slice(0, 3);
-    const sp     = b.species.padEnd(8);
+    const baseLabel = bitmapBaseLabelForKey(s.results[i].bitmapBase);
+    const sp     = baseLabel.slice(0, 16).padEnd(16);
     const eye    = `e:${b.eye}`;
     const hat    = `h:${b.hat.slice(0, 6).padEnd(6)}`;
     const row    = `  ${clr}${ra}${N} ${sp} ${GR}${eye} ${hat}${N} ${shiny}`;
@@ -306,6 +310,7 @@ function previewPane(s: State): string[] {
       bones: r.bones, name: "???",
       personality: generatePersonality(r.bones, r.userId),
       hatchedAt: Date.now(), userId: r.userId,
+      bitmapBase: r.bitmapBase,
     };
   } else if (s.mode === "naming" && s.pendingResult) {
     const r = s.pendingResult;
@@ -313,6 +318,7 @@ function previewPane(s: State): string[] {
       bones: r.bones, name: s.nameInput || "???",
       personality: generatePersonality(r.bones, r.userId),
       hatchedAt: Date.now(), userId: r.userId,
+      bitmapBase: r.bitmapBase,
     };
   }
 
@@ -320,7 +326,7 @@ function previewPane(s: State): string[] {
   // Calculate available width for the right pane (total cols - left pane - separator)
   const cols = Math.max(80, process.stdout.columns || 80);
   const rightW = cols - LEFT_W - 3;
-  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW).split("\n");
+  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW, c.bitmapBase).split("\n");
 }
 
 // ─── Screen render ────────────────────────────────────────────────────────────
@@ -378,7 +384,7 @@ function avgStat(bones: BuddyBones): number {
 }
 
 async function runSearch(s: State): Promise<void> {
-  const wantSp    = SP_OPTS[s.ci[0]]  !== "any" ? SP_OPTS[s.ci[0]]  as Species  : null;
+  const wantBase  = BASE_OPTS[s.ci[0]] !== "any" ? BASE_OPTS[s.ci[0]] : null;
   const wantRa    = RA_OPTS[s.ci[1]]  !== "any" ? RA_OPTS[s.ci[1]]  as Rarity   : null;
   const wantShiny = SH_OPTS[s.ci[2]] === "yes"  ? true
                   : SH_OPTS[s.ci[2]] === "no"   ? false : null;
@@ -418,7 +424,6 @@ async function runSearch(s: State): Promise<void> {
     const userId = randomBytes(16).toString("hex");
     const bones  = generateBones(userId);
 
-    if (wantSp    !== null && bones.species !== wantSp)              continue;
     if (wantRa    !== null && bones.rarity  !== wantRa)              continue;
     if (wantShiny !== null && bones.shiny   !== wantShiny)           continue;
     if (wantPeak  !== null && bones.peak    !== wantPeak)            continue;
@@ -432,7 +437,7 @@ async function runSearch(s: State): Promise<void> {
     if (minWIS    !== null && bones.stats.WISDOM    < minWIS)        continue;
     if (minSNK    !== null && bones.stats.SNARK     < minSNK)        continue;
 
-    results.push({ userId, bones });
+    results.push({ userId, bones, bitmapBase: wantBase ?? pickBitmapBaseForSeed(`pick-result:${userId}`) });
   }
 
   s.searching    = false;
@@ -484,7 +489,7 @@ function onKey(key: string, s: State): boolean {
           bones: r.bones, name,
           personality: generatePersonality(r.bones, r.userId),
           hatchedAt: Date.now(), userId: r.userId,
-          bitmapBase: pickBitmapBaseForSeed(`pick:${r.userId}:${name}`),
+          bitmapBase: r.bitmapBase ?? pickBitmapBaseForSeed(`pick:${r.userId}:${name}`),
         };
         saveCompanionSlot(companion, slot);
         saveActiveSlot(slot);

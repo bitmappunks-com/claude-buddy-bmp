@@ -139,9 +139,9 @@ function dpad(s: string, targetW: number): string {
 
 // ─── Render functions ───────────────────────────────────────────────────────
 
-export function getArtFrame(_species: Species, _eye: Eye, frame: number = 0): string[] {
+export function getArtFrame(_species: Species, _eye: Eye, frame: number = 0, bitmapBase?: string): string[] {
   const ctx = currentBitmapReactionContext();
-  const art = buildBitmapStatusArt(currentBitmapBase(), ctx.reason, ctx.seed);
+  const art = buildBitmapStatusArt(currentBitmapBase(bitmapBase), ctx.reason, ctx.seed);
   return art.frames[frame % art.frames.length].split("\n");
 }
 
@@ -172,11 +172,12 @@ export function renderCompanionCard(
   reaction?: string,
   frame: number = 0,
   width: number = 40,
+  bitmapBase?: string,
 ): string {
   const color = RARITY_COLOR[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? `${SHINY_COLOR}\u2728 ${NC}` : "";
-  const art = getArtFrame(bones.species, bones.eye, frame);
+  const art = getArtFrame(bones.species, bones.eye, frame, bitmapBase);
   applyHat(bones.species, bones.hat, art);
   const artWidth = art.reduce((max, line) => Math.max(max, displayWidth(line)), 0);
 

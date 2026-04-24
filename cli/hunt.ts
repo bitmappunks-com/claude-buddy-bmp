@@ -15,7 +15,9 @@ import { createInterface } from "readline";
 import {
   generateBones,
   generatePersonality,
+  RARITIES,
   type Companion,
+  type Rarity,
 } from "../server/engine.ts";
 import {
   resolveUserId,
@@ -26,6 +28,7 @@ import {
   writeStatusState,
 } from "../server/state.ts";
 import {
+  formatBitmapBaseLabel,
   listBitmapBaseTraits,
   type BitmapBaseInfo,
 } from "../server/bitmappunk-avatar.ts";
@@ -85,26 +88,14 @@ function uniqueBy<T>(items: readonly T[], keyOf: (item: T) => string): T[] {
   return out;
 }
 
-function baseVariantParts(base: BitmapBaseInfo): string[] {
-  const familyTokens = new Set(
-    base.displayName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean),
-  );
-  return base.name
-    .split("_")
-    .filter((part) => part !== base.gender && !familyTokens.has(part.toLowerCase()))
-    .map((part) => part.toLowerCase());
-}
-
-function describeBase(base: BitmapBaseInfo): string {
-  const parts = [base.displayName, ...baseVariantParts(base), base.gender];
-  return `(${parts.join(", ")})`;
-}
-
-function createCompanionForBase(base: BitmapBaseInfo): { companion: Companion; slot: string } {
+function createCompanionForBase(base: BitmapBaseInfo, rarity: Rarity, requestedName?: string): { companion: Companion; slot: string } {
   const userId = resolveUserId();
   const now = Date.now();
-  const bones = generateBones(userId, `hunt:${base.key}:${now}`);
-  const name = unusedName();
+  let bones = generateBones(userId, `hunt:${base.key}:${rarity}:${now}`);
+  for (let i = 0; bones.rarity !== rarity && i < 250_000; i++) {
+    bones = generateBones(`${userId}:${i}`, `hunt:${base.key}:${rarity}:${now}`);
+  }
+  const name = requestedName?.trim() || unusedName();
   const companion: Companion = {
     bones,
     name,
@@ -142,12 +133,19 @@ ${CYAN}╚═══════════════════════�
   const variants = basesForGender.filter((base) => base.displayName === typeChoice.displayName);
   const chosen = variants.length === 1
     ? variants[0]!
-    : await pickFromList<BitmapBaseInfo>("Exact look:", variants, describeBase);
+    : await pickFromList<BitmapBaseInfo>("Exact look:", variants, formatBitmapBaseLabel);
 
-  const { companion, slot } = createCompanionForBase(chosen);
-  writeStatusState(companion, `*${companion.name} arrives as ${describeBase(chosen)}*`);
+  const rarity = await pickFromList<Rarity>("Rarity:", RARITIES, (item) => item);
+  console.log(`${GREEN}✓${NC} ${rarity}`);
 
-  console.log(`\n${GREEN}✓${NC}  Created ${BOLD}${companion.name}${NC} ${describeBase(chosen)}`);
+  const suggested = unusedName();
+  const nameAnswer = await ask(`\n  Name this pet (Enter for "${suggested}"): `);
+  const requestedName = nameAnswer.trim() || suggested;
+
+  const { companion, slot } = createCompanionForBase(chosen, rarity, requestedName);
+  writeStatusState(companion, `*${companion.name} arrives as ${formatBitmapBaseLabel(chosen)}*`);
+
+  console.log(`\n${GREEN}✓${NC}  Created ${BOLD}${companion.name}${NC} ${formatBitmapBaseLabel(chosen)}`);
   console.log(`${DIM}  Saved to slot "${slot}" and set as active. This pet keeps its own BASE and generated setup.${NC}`);
   console.log(`\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
   console.log(`${GREEN}  Done! Restart Claude Code to see the selected pet.${NC}`);

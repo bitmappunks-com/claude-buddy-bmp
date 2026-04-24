@@ -184,6 +184,24 @@ export function pickBitmapBaseForSeed(seed: string): string {
   return bases[hash % bases.length]!.key;
 }
 
+function baseVariantParts(base: Pick<BitmapBaseInfo, "name" | "displayName" | "gender">): string[] {
+  const familyTokens = new Set(base.displayName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean));
+  return base.name
+    .split("_")
+    .filter((part) => part !== base.gender && !familyTokens.has(part.toLowerCase()))
+    .map((part) => part.toLowerCase());
+}
+
+export function formatBitmapBaseLabel(base: Pick<BitmapBaseInfo, "name" | "displayName" | "gender">): string {
+  return `(${[base.displayName, ...baseVariantParts(base), base.gender].join(", ")})`;
+}
+
+export function bitmapBaseLabelForKey(baseKey: string | undefined): string {
+  const resolved = resolveBitmapBaseSelection(baseKey ?? DEFAULT_BITMAP_BASE);
+  const base = listBitmapBaseTraits().find((candidate) => candidate.key === resolved);
+  return base ? formatBitmapBaseLabel(base) : formatBitmapBaseLabel(loadBitmapBaseTrait(resolved));
+}
+
 const ERROR_ITEM_POOL = ["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"] as const;
 const SUCCESS_ITEM_POOL = ["1744-bubble_gum_large", "1749-sleep_bubble"] as const;
 const FIRE_ITEM_POOL = ["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"] as const;
