@@ -56,6 +56,12 @@ switch (command) {
   case "enable":
     await import("./install.ts");
     break;
+  case "base":
+    await import("./base.ts");
+    break;
+  case "item":
+    await import("./item.ts");
+    break;
   case "help":
   case "--help":
   case "-h":
@@ -83,6 +89,8 @@ Buddy:
   pick              Interactive two-pane buddy picker (browse saved + search)
   hunt              Search for a specific buddy (non-interactive)
   verify            Verify what buddy your current ID produces
+  base <trait>      Choose the active BitmapPunks BASE trait for rendering
+  item <trait>      Choose the active BitmapPunks ITEM animation for rendering
 
   upgrade           Pull latest version + reinstall (add --check to just check)
 

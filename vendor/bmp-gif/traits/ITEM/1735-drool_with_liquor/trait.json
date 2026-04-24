@@ -1,0 +1,49 @@
+{
+  "id": 1735,
+  "name": "drool_with_liquor",
+  "displayName": "Drool with Liquor",
+  "category": "ITEM",
+  "palette": [
+    "rgb(233, 253, 165)",
+    "rgb(216, 255, 80)",
+    "rgb(190, 232, 46)"
+  ],
+  "layerPixels": [
+    {
+      "name": "drool_with_liquor-0",
+      "zIndex": 120,
+      "bitsPerPixel": 2,
+      "width": 24,
+      "height": 24,
+      "pixelsDataWith0x": "0x6cb20",
+      "pixels": [
+        [
+          "rgb(233, 253, 165)",
+          "rgb(216, 255, 80)",
+          "rgb(190, 232, 46)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(216, 255, 80)",
+          "rgb(190, 232, 46)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(216, 255, 80)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      ],
+      "activeRegion": {
+        "xTL": 11,
+        "yTL": 19,
+        "xBR": 14,
+        "yBR": 22,
+        "bgColor": "rgba(0, 0, 0, 0)"
+      }
+    }
+  ],
+  "description": {
+    "zh": "酒从嘴里流出来",
+    "visual": "嘴角下方一小滴淡黄色酒液（形状同 drool）"
+  }
+}

@@ -8,8 +8,14 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
-import { HELLO_BITMAPPUNK_FRAME } from "./bitmappunk-avatar.ts";
+import {
+  displayWidth,
+  getStatusFrames,
+  renderCompanionCardMarkdown,
+  renderStatusLine,
+  STATUS_FRAME_SEQUENCE,
+} from "./art.ts";
+import { DEFAULT_BITMAP_FRAME } from "./bitmappunk-avatar.ts";
 import { SPECIES, type BuddyBones } from "./engine.ts";
 
 describe("displayWidth", () => {
@@ -76,19 +82,19 @@ describe("getStatusFrames", () => {
     ...overrides,
   });
 
-  test("produces 4 frames and a 15-tick sequence", () => {
+  test("produces 12 frames and a playback sequence that includes item interactions", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
-    expect(frames).toHaveLength(4);
+    expect(frames).toHaveLength(12);
     expect(frameSequence).toEqual([...STATUS_FRAME_SEQUENCE]);
   });
 
-  test("every species produces 4 bitmap frames, each matching the generated avatar height", () => {
+  test("every species produces 12 bitmap frames, each matching the generated avatar height", () => {
     for (const species of SPECIES) {
       const { frames } = getStatusFrames(bones({ species }));
-      expect(frames).toHaveLength(4);
+      expect(frames).toHaveLength(12);
       for (const body of frames) {
         const lines = body.split("\n");
-        expect(lines).toHaveLength(HELLO_BITMAPPUNK_FRAME.length);
+        expect(lines).toHaveLength(DEFAULT_BITMAP_FRAME.length);
         expect(body).toMatch(/\x1b\[(?:38|48);(?:2|5);/);
       }
     }
@@ -101,9 +107,14 @@ describe("getStatusFrames", () => {
     expect(withAt.frames[0]).not.toContain("{E}");
   });
 
-  test("blink frame reuses the same implanted bitmap art", () => {
+  test("blink frame is rendered from vendored action data and differs from the idle frame", () => {
     const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
-    expect(frames[3]).toBe(frames[0]);
+    expect(frames[3]).not.toBe(frames[0]);
+  });
+
+  test("move frame is rendered from vendored action data and differs from the idle frame", () => {
+    const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
+    expect(frames[1]).not.toBe(frames[0]);
   });
 
   test("hat overlays are ignored because the implanted avatar fully occupies line 0", () => {
@@ -112,12 +123,44 @@ describe("getStatusFrames", () => {
     expect(withHat.frames[0]).toBe(plain.frames[0]);
   });
 
-  test("frame sequence references only valid frame indices", () => {
+  test("frame sequence references only valid frame indices and includes an item loop", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
+    expect(frameSequence.some((idx) => idx >= 4)).toBe(true);
     for (const idx of frameSequence) {
       expect(idx).toBeGreaterThanOrEqual(0);
       expect(idx).toBeLessThan(frames.length);
     }
+  });
+});
+
+describe("render metadata", () => {
+  const bones = (): BuddyBones => ({
+    rarity: "common",
+    species: "capybara",
+    eye: "°",
+    hat: "none",
+    shiny: false,
+    stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
+    peak: "DEBUGGING",
+    dump: "PATIENCE",
+  });
+
+  test("markdown card names the active BitmapPunks base instead of the old hello seed", () => {
+    const expectedBase = getStatusFrames(bones()).bitmapBase;
+    const markdown = renderCompanionCardMarkdown(
+      bones(),
+      "buddy",
+      "Keeps a calm watch on the terminal.",
+    );
+    expect(markdown).toContain(expectedBase);
+    expect(markdown).not.toContain("seed `hello`");
+  });
+
+  test("status line marker reflects the active BitmapPunks base instead of hello", () => {
+    const expectedBase = getStatusFrames(bones()).bitmapBase;
+    const line = renderStatusLine(bones(), "buddy");
+    expect(line).toContain(`bitmap:${expectedBase}`);
+    expect(line).not.toContain("bitmap:hello");
   });
 });
 

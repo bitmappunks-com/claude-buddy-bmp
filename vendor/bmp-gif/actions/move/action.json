@@ -1,0 +1,25 @@
+{
+  "name": "move",
+  "description": "连续三帧：看左 → 看右 → 看左。看右时，每只眼珠与其右邻像素对调颜色。",
+  "anchors": {
+    "eye_y":   { "female": 13, "male": 12 },
+    "eye_l_x": 9,
+    "eye_r_x": 14
+  },
+  "frames": [0, 1, 0],
+  "states": {
+    "0": {
+      "name": "look_left",
+      "description": "默认姿态：眼珠在眼窝左侧（base 原像素）",
+      "ops": []
+    },
+    "1": {
+      "name": "look_right",
+      "description": "眼珠右移：每只眼珠与其右邻像素对调",
+      "ops": [
+        { "op": "swap", "a": { "x": "eye_l_x",     "y": "eye_y" }, "b": { "x": "eye_l_x + 1", "y": "eye_y" } },
+        { "op": "swap", "a": { "x": "eye_r_x",     "y": "eye_y" }, "b": { "x": "eye_r_x + 1", "y": "eye_y" } }
+      ]
+    }
+  }
+}

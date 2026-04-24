@@ -76,7 +76,10 @@ if [ -z "$FRAME_BODY" ]; then
     FRAME_BODY=$'            \n    (°°)    \n    (  )    \n            \n            '
 fi
 
-mapfile -t ART_LINES <<< "$FRAME_BODY"
+ART_LINES=()
+while IFS= read -r line || [ -n "$line" ]; do
+    ART_LINES+=("$line")
+done < <(printf '%s\n' "$FRAME_BODY")
 
 # ─── Rarity color (pC4 = dark theme, the default) ────────────────────────────
 NC=$'\033[0m'

@@ -1,37 +1,33 @@
-// Preview the avatar via iTerm2's inline-image protocol (OSC 1337 File=).
-// Works in iTerm2, WezTerm, and Konsole; no-op / garbled elsewhere.
+// Preview the vendored BitmapPunks companion as ANSI terminal art.
 // Usage:
-//   bun run scripts/preview-iterm-inline.ts              # default 24ch × 24ch
-//   bun run scripts/preview-iterm-inline.ts 32ch 16ch    # explicit cell units
-//   bun run scripts/preview-iterm-inline.ts 192 192      # explicit pixel units
-//   bun run scripts/preview-iterm-inline.ts auto auto    # native size
-import { readFileSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
+//   bun run scripts/preview-iterm-inline.ts                     # default base + default item
+//   bun run scripts/preview-iterm-inline.ts 100-solana_male     # explicit base
+//   bun run scripts/preview-iterm-inline.ts 100-solana_male 1-420 fullcell
+import {
+  DEFAULT_BITMAP_BASE,
+  DEFAULT_BITMAP_ITEM,
+  buildBitmapStatusArt,
+} from "../server/bitmappunk-avatar.ts";
 
-const HERE = dirname(fileURLToPath(import.meta.url));
-const GIF_PATH = join(HERE, "..", "assets", "hello.gif");
+type PreviewMode = "halfblock" | "fullcell" | "auto";
 
-const bytes = readFileSync(GIF_PATH);
-const b64 = bytes.toString("base64");
-const nameB64 = Buffer.from("hello.gif").toString("base64");
+function normalizeMode(value: string | undefined): PreviewMode {
+  if (value === "halfblock" || value === "fullcell") return value;
+  return "auto";
+}
 
-const widthArg = process.argv[2] ?? "24ch";
-const heightArg = process.argv[3] ?? "24ch";
+const baseKey = process.argv[2] ?? DEFAULT_BITMAP_BASE;
+const itemKey = process.argv[3] ?? DEFAULT_BITMAP_ITEM;
+const mode = normalizeMode(process.argv[4]);
+const status = buildBitmapStatusArt(baseKey, itemKey);
+const frame =
+  mode === "halfblock"
+    ? status.framesHalfblock[0]
+    : mode === "fullcell"
+      ? status.framesFullcell[0]
+      : status.frames[0];
 
-const params = [
-  "inline=1",
-  `name=${nameB64}`,
-  `size=${bytes.byteLength}`,
-  `width=${widthArg}`,
-  `height=${heightArg}`,
-  "preserveAspectRatio=1",
-].join(";");
-
-const esc = `\x1b]1337;File=${params}:${b64}\x07`;
-
-console.log(`# iTerm2 inline image  |  ${GIF_PATH}  |  ${bytes.byteLength} B`);
-console.log(`# width=${widthArg} height=${heightArg}  (suffix with 'ch' for cells, plain number = pixels, '100%' = percentage, 'auto' = native)`);
+console.log(`# BitmapPunks preview`);
+console.log(`# base=${status.bitmapBase} item=${status.bitmapItem ?? "none"} mode=${mode}`);
 console.log();
-process.stdout.write(esc);
-console.log();
+console.log(frame);

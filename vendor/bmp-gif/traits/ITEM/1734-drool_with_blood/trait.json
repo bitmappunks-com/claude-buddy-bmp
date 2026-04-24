@@ -1,0 +1,49 @@
+{
+  "id": 1734,
+  "name": "drool_with_blood",
+  "displayName": "Drool with Blood",
+  "category": "ITEM",
+  "palette": [
+    "rgb(255, 81, 84)",
+    "rgb(228, 65, 67)",
+    "rgb(204, 42, 44)"
+  ],
+  "layerPixels": [
+    {
+      "name": "drool_with_blood-0",
+      "zIndex": 120,
+      "bitsPerPixel": 2,
+      "width": 24,
+      "height": 24,
+      "pixelsDataWith0x": "0x6cb20",
+      "pixels": [
+        [
+          "rgb(255, 81, 84)",
+          "rgb(228, 65, 67)",
+          "rgb(204, 42, 44)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(228, 65, 67)",
+          "rgb(204, 42, 44)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(228, 65, 67)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      ],
+      "activeRegion": {
+        "xTL": 11,
+        "yTL": 19,
+        "xBR": 14,
+        "yBR": 22,
+        "bgColor": "rgba(0, 0, 0, 0)"
+      }
+    }
+  ],
+  "description": {
+    "zh": "血从嘴里流出来",
+    "visual": "嘴角下方一小滴暗红色血迹（形状同 drool）"
+  }
+}

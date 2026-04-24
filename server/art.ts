@@ -6,35 +6,17 @@
  * {E} is replaced with the eye character at render time.
  */
 
-import { SPECIES, type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
-import {
-  HELLO_BITMAPPUNK_FRAMES,
-  HELLO_BITMAPPUNK_FRAMES_HALFBLOCK,
-  HELLO_BITMAPPUNK_FRAMES_FULLCELL,
-} from "./bitmappunk-avatar.ts";
+import { type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
+import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, DEFAULT_BITMAP_ITEM } from "./bitmappunk-avatar.ts";
+import { loadConfig } from "./state.ts";
 
-// ─── Species art: 3 frames × 5 lines each ──────────────────────────────────
+function currentBitmapBase(): string {
+  return loadConfig().activeBitmapBase ?? DEFAULT_BITMAP_BASE;
+}
 
-export const SPECIES_ART: Record<Species, string[][]> = Object.fromEntries(
-  SPECIES.map((species) => [
-    species,
-    HELLO_BITMAPPUNK_FRAMES.map((frame) => frame.map((line) => line)),
-  ]),
-) as Record<Species, string[][]>;
-
-const SPECIES_ART_HALFBLOCK: Record<Species, string[][]> = Object.fromEntries(
-  SPECIES.map((species) => [
-    species,
-    HELLO_BITMAPPUNK_FRAMES_HALFBLOCK.map((frame) => frame.map((line) => line)),
-  ]),
-) as Record<Species, string[][]>;
-
-const SPECIES_ART_FULLCELL: Record<Species, string[][]> = Object.fromEntries(
-  SPECIES.map((species) => [
-    species,
-    HELLO_BITMAPPUNK_FRAMES_FULLCELL.map((frame) => frame.map((line) => line)),
-  ]),
-) as Record<Species, string[][]>;
+function currentBitmapItem(): string {
+  return loadConfig().activeBitmapItem ?? DEFAULT_BITMAP_ITEM;
+}
 
 // ─── Hat art ────────────────────────────────────────────────────────────────
 
@@ -146,57 +128,31 @@ function dpad(s: string, targetW: number): string {
 
 // ─── Render functions ───────────────────────────────────────────────────────
 
-export function getArtFrame(species: Species, eye: Eye, frame: number = 0): string[] {
-  const frames = SPECIES_ART[species];
-  const f = frames[frame % frames.length];
-  return f.map((line) => line.replace(/\{E\}/g, eye));
+export function getArtFrame(_species: Species, _eye: Eye, frame: number = 0): string[] {
+  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem());
+  return art.frames[frame % art.frames.length].split("\n");
 }
 
-// Original 15-tick cycle [0,0,0,0,1,0,0,0,-1,0,0,2,0,0,0]: -1 (blink) becomes
-// index 3 in the pre-baked frames array.
 export const STATUS_FRAME_SEQUENCE: readonly number[] = [
-  0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 2, 0, 0, 0,
+  0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 4, 5, 6, 7, 8, 9, 10, 11, 0, 2, 0, 0, 0,
 ];
 
-// Pre-resolves eye, hat overlay, and blink so the statusline shell does no art
-// work — it just cycles whatever frames the server writes. Each frame is a
-// \n-joined 5-line string (one jq call + mapfile in bash).
-//
-// Both halfblock and fullcell variants are emitted: the statusline shell reads
-// its own $TERM_PROGRAM and picks. That is how a single shared status.json
-// supports multiple terminals concurrently without locking in the first one's
-// env.
-export function getStatusFrames(bones: BuddyBones): {
+export function getStatusFrames(_bones: BuddyBones): {
+  bitmapBase: string;
+  bitmapItem?: string;
   frames: string[];
   framesHalfblock: string[];
   framesFullcell: string[];
   frameSequence: number[];
 } {
-  const resolveFrame =
-    (src: Record<Species, string[][]>) =>
-    (frameIdx: number, eye: string): string => {
-      const raw = src[bones.species][frameIdx];
-      const art = raw.map((line) => line.replace(/\{E\}/g, eye));
-      const hatLine = HAT_ART[bones.hat];
-      if (hatLine && !art[0].trim()) {
-        art[0] = hatLine;
-      }
-      return art.join("\n");
-    };
-
-  const build = (src: Record<Species, string[][]>): string[] => {
-    const r = resolveFrame(src);
-    return [r(0, bones.eye), r(1, bones.eye), r(2, bones.eye), r(0, "-")];
-  };
-
-  const framesHalfblock = build(SPECIES_ART_HALFBLOCK);
-  const framesFullcell = build(SPECIES_ART_FULLCELL);
-
+  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem());
   return {
-    frames: build(SPECIES_ART),
-    framesHalfblock,
-    framesFullcell,
-    frameSequence: [...STATUS_FRAME_SEQUENCE],
+    bitmapBase: art.bitmapBase,
+    bitmapItem: art.bitmapItem,
+    frames: [...art.frames],
+    framesHalfblock: [...art.framesHalfblock],
+    framesFullcell: [...art.framesFullcell],
+    frameSequence: [...art.frameSequence],
   };
 }
 
@@ -344,8 +300,10 @@ export function renderCompanionCardMarkdown(
   parts.push(`### ${dot} ${name} · \`${bones.rarity.toUpperCase()} ${bones.species}\` · ${stars}${shiny}`);
   parts.push("");
 
+  const bitmapBase = currentBitmapBase();
+
   // ANSI bitmap art does not render cleanly in Claude's markdown UI.
-  parts.push(`**Avatar:** BitmapPunks seed \`hello\``);
+  parts.push(`**Avatar:** BitmapPunks base \`${bitmapBase}\``);
   parts.push(artLines.length > 0 ? `_terminal preview: ${artLines.length} rows of ANSI bitmap art_` : "");
   parts.push("");
 
@@ -382,7 +340,7 @@ export function renderStatusLine(
   name: string,
   reaction?: string,
 ): string {
-  const face = "bitmap:hello";
+  const face = `bitmap:${currentBitmapBase()}`;
   const color = RARITY_COLOR[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? "\u2728" : "";

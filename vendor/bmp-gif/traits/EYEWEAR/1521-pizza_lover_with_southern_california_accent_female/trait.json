@@ -1,0 +1,156 @@
+{
+  "id": 1521,
+  "name": "pizza_lover_with_southern_california_accent_female",
+  "displayName": "Pizza Lover with Southern California Accent",
+  "category": "EYEWEAR",
+  "palette": [
+    "rgb(228, 125, 39)",
+    "rgb(189, 91, 19)",
+    "rgb(0, 0, 0)",
+    "rgb(155, 72, 9)"
+  ],
+  "layerPixels": [
+    {
+      "name": "pizza_lover_with_southern_california_accent_female-0",
+      "zIndex": 110,
+      "bitsPerPixel": 4,
+      "width": 24,
+      "height": 24,
+      "pixelsDataWith0x": "0x0110001100100121001320012100232222022223",
+      "pixels": [
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(228, 125, 39)",
+          "rgb(228, 125, 39)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgb(228, 125, 39)",
+          "rgb(228, 125, 39)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ],
+        [
+          "rgb(228, 125, 39)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgb(228, 125, 39)",
+          "rgb(189, 91, 19)",
+          "rgb(228, 125, 39)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgb(228, 125, 39)",
+          "rgb(0, 0, 0)"
+        ],
+        [
+          "rgb(189, 91, 19)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgb(228, 125, 39)",
+          "rgb(189, 91, 19)",
+          "rgb(228, 125, 39)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgb(189, 91, 19)",
+          "rgb(0, 0, 0)"
+        ],
+        [
+          "rgb(189, 91, 19)",
+          "rgb(189, 91, 19)",
+          "rgb(189, 91, 19)",
+          "rgb(189, 91, 19)",
+          "rgba(0, 0, 0, 0)",
+          "rgb(189, 91, 19)",
+          "rgb(189, 91, 19)",
+          "rgb(189, 91, 19)",
+          "rgb(189, 91, 19)",
+          "rgb(0, 0, 0)"
+        ]
+      ],
+      "activeRegion": {
+        "xTL": 8,
+        "yTL": 11,
+        "xBR": 18,
+        "yBR": 15,
+        "bgColor": "rgba(0, 0, 0, 0)"
+      }
+    },
+    {
+      "name": "pizza_lover_with_southern_california_accent_female-1",
+      "zIndex": 79,
+      "bitsPerPixel": 4,
+      "width": 24,
+      "height": 24,
+      "pixelsDataWith0x": "0x333000321300032130003414031424322334333000",
+      "pixels": [
+        [
+          "rgb(0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ],
+        [
+          "rgb(0, 0, 0)",
+          "rgb(189, 91, 19)",
+          "rgb(228, 125, 39)",
+          "rgb(0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgb(189, 91, 19)",
+          "rgb(228, 125, 39)",
+          "rgb(0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgb(155, 72, 9)",
+          "rgb(228, 125, 39)",
+          "rgb(155, 72, 9)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgb(228, 125, 39)",
+          "rgb(155, 72, 9)",
+          "rgb(189, 91, 19)",
+          "rgb(155, 72, 9)"
+        ],
+        [
+          "rgb(0, 0, 0)",
+          "rgb(189, 91, 19)",
+          "rgb(189, 91, 19)",
+          "rgb(0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgb(155, 72, 9)"
+        ],
+        [
+          "rgb(0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgb(0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      ],
+      "activeRegion": {
+        "xTL": 2,
+        "yTL": 9,
+        "xBR": 8,
+        "yBR": 16,
+        "bgColor": "rgba(0, 0, 0, 0)"
+      }
+    }
+  ],
+  "description": {
+    "zh": "橙色露眼眼罩",
+    "visual": "橙色横向眼罩布条，中央两个椭圆镂空"
+  }
+}

@@ -313,6 +313,8 @@ export interface BuddyConfig {
   bubbleWidth: number;
   bubbleMargin: number;
   useCombinedStatus: boolean;
+  activeBitmapBase?: string;
+  activeBitmapItem?: string;
   rainbowColors?: string[];
 }
 
@@ -356,6 +358,8 @@ export interface StatusState {
   eye: string;
   shiny: boolean;
   hat: string;
+  bitmapBase?: string;
+  bitmapItem?: string;
   reaction: string;
   muted: boolean;
   achievement: string;
@@ -376,7 +380,7 @@ export function writeStatusState(
     require("./engine.ts") as typeof import("./engine.ts");
   const { getStatusFrames } =
     require("./art.ts") as typeof import("./art.ts");
-  const { frames, framesHalfblock, framesFullcell, frameSequence } =
+  const { frames, framesHalfblock, framesFullcell, frameSequence, bitmapBase, bitmapItem } =
     getStatusFrames(companion.bones);
   const state: StatusState = {
     name: companion.name,
@@ -387,6 +391,8 @@ export function writeStatusState(
     eye: companion.bones.eye,
     shiny: companion.bones.shiny,
     hat: companion.bones.hat,
+    bitmapBase,
+    bitmapItem,
     reaction: reaction ?? "",
     muted: muted ?? false,
     achievement: achievement ?? "",

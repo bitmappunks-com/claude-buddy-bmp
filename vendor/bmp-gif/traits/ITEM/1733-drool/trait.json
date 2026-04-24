@@ -1,0 +1,49 @@
+{
+  "id": 1733,
+  "name": "drool",
+  "displayName": "Drool",
+  "category": "ITEM",
+  "palette": [
+    "rgb(161, 208, 255)",
+    "rgb(119, 187, 255)",
+    "rgb(92, 174, 255)"
+  ],
+  "layerPixels": [
+    {
+      "name": "drool-0",
+      "zIndex": 120,
+      "bitsPerPixel": 2,
+      "width": 24,
+      "height": 24,
+      "pixelsDataWith0x": "0x6cb20",
+      "pixels": [
+        [
+          "rgb(161, 208, 255)",
+          "rgb(119, 187, 255)",
+          "rgb(92, 174, 255)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(119, 187, 255)",
+          "rgb(92, 174, 255)"
+        ],
+        [
+          "rgba(0, 0, 0, 0)",
+          "rgb(119, 187, 255)",
+          "rgba(0, 0, 0, 0)"
+        ]
+      ],
+      "activeRegion": {
+        "xTL": 11,
+        "yTL": 19,
+        "xBR": 14,
+        "yBR": 22,
+        "bgColor": "rgba(0, 0, 0, 0)"
+      }
+    }
+  ],
+  "description": {
+    "zh": "流口水",
+    "visual": "嘴角下方一小滴浅蓝色口水（三角形，约 6 像素）"
+  }
+}

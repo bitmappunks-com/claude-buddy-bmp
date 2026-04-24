@@ -3,7 +3,6 @@
  * Matches Claude Code's exact algorithm: wyhash → mulberry32 → species/stats
  */
 
-import { HELLO_BITMAPPUNK_FRAME } from "./bitmappunk-avatar.ts";
 
 export const SALT = "friend-2026-401";
 
@@ -406,7 +405,8 @@ export function renderFace(_species: Species, eye: Eye): string {
 }
 
 export function renderBuddy(bones: BuddyBones): string {
-  const art = HELLO_BITMAPPUNK_FRAME.map((line) => line);
+  const { getArtFrame } = require("./art.ts") as typeof import("./art.ts");
+  const art = getArtFrame(bones.species, bones.eye, 0);
   const shiny = bones.shiny ? "\u2728 " : "";
   const stars = RARITY_STARS[bones.rarity];
 
