@@ -69,12 +69,13 @@ if (!args[0]) {
   process.exit(0);
 }
 
-const requested = args[0];
-if (requested === "list") {
+const command = args[0];
+if (command === "list") {
   printBaseList();
   process.exit(0);
 }
 
+const requested = args.join(" ");
 let chosen;
 try {
   const resolved = resolveBitmapBaseSelection(requested);

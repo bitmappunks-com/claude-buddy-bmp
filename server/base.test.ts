@@ -64,6 +64,32 @@ describe("cli base command", () => {
     expect(config.activeBitmapBase).toMatch(/solana_(male|female)$/);
   });
 
+  test("accepts multi-word base trait names from CLI args and persists the canonical key", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-multi-word-"));
+    mkdirSync(profileDir, { recursive: true });
+    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-multi-word-user" }));
+
+    const proc = Bun.spawnSync({
+      cmd: [process.execPath, "run", "cli/index.ts", "base", "demon", "purple", "female"],
+      cwd: join(import.meta.dir, ".."),
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: profileDir,
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(proc.exitCode).toBe(0);
+    expect(Buffer.from(proc.stdout).toString("utf8")).toContain("39-demon_purple_female");
+
+    const config = JSON.parse(readFileSync(join(profileDir, "buddy-state", "config.json"), "utf8"));
+    expect(config.activeBitmapBase).toBe("39-demon_purple_female");
+
+    const status = JSON.parse(readFileSync(join(profileDir, "buddy-state", "status.json"), "utf8"));
+    expect(status.bitmapBase).toBe("39-demon_purple_female");
+  });
+
   test("supports resetting the active bitmap base back to the default trait", () => {
     const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-default-"));
     mkdirSync(profileDir, { recursive: true });

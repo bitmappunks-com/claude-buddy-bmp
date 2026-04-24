@@ -224,6 +224,20 @@ function normalizedBitmapReason(reason?: string): string {
   return (reason ?? "").toLowerCase();
 }
 
+function hashBitmapReason(reason: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < reason.length; i++) {
+    hash ^= reason.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function mixBitmapAnimationSeed(reason: string, seed: number): number {
+  if (!reason) return seed;
+  return Math.imul(seed, 31) + hashBitmapReason(reason);
+}
+
 function reasonIn(reason: string, pool: readonly string[]): boolean {
   return pool.includes(reason);
 }
@@ -239,36 +253,37 @@ function pickProfile(seed: number, profiles: BitmapAnimationProfile[]): BitmapAn
 
 function resolveBitmapAnimationProfile(reason?: string, seed: number = 0): BitmapAnimationProfile {
   const normalized = normalizedBitmapReason(reason);
+  const animationSeed = mixBitmapAnimationSeed(normalized, seed);
 
   if (reasonIn(normalized, ERROR_REASONS)) {
-    return pickProfile(seed, [
+    return pickProfile(animationSeed, [
       { intro: [0, 3, 0, 1, 0], outro: [3, 0, 2, 0, 0], itemBurst: 5 },
       { intro: [0, 1, 3, 0, 3], outro: [0, 2, 0, 3, 0], itemBurst: 4 },
     ]);
   }
 
   if (reasonIn(normalized, SUCCESS_REASONS)) {
-    return pickProfile(seed, [
+    return pickProfile(animationSeed, [
       { intro: [0, 1, 0, 1, 0], outro: [0, 2, 0, 0], itemBurst: 4 },
       { intro: [0, 2, 0, 1, 0], outro: [0, 1, 0, 0], itemBurst: 3 },
     ]);
   }
 
   if (reasonIn(normalized, FIRE_REASONS)) {
-    return pickProfile(seed, [
+    return pickProfile(animationSeed, [
       { intro: [0, 1, 3, 1, 0], outro: [0, 3, 0, 2, 0], itemBurst: 5 },
       { intro: [0, 3, 1, 0, 1], outro: [3, 0, 2, 0, 0], itemBurst: 5 },
     ]);
   }
 
   if (reasonIn(normalized, CHURN_REASONS)) {
-    return pickProfile(seed, [
+    return pickProfile(animationSeed, [
       { intro: [0, 1, 0, 3, 0], outro: [0, 1, 0, 2, 0], itemBurst: 4 },
       { intro: [0, 3, 0, 1, 0], outro: [0, 2, 0, 1, 0], itemBurst: 4 },
     ]);
   }
 
-  return pickProfile(seed, [
+  return pickProfile(animationSeed, [
     { intro: [0, 0, 0, 1, 0, 0], outro: [0, 3, 0, 2, 0, 0], itemBurst: reasonIn(normalized, IDLE_REASONS) ? 4 : 3 },
     { intro: [0, 0, 1, 0, 0, 3], outro: [0, 2, 0, 0, 0], itemBurst: 3 },
   ]);
@@ -323,20 +338,21 @@ export function resolveBitmapItemSelection(
   if (requestedItem && requestedItem !== "auto") return resolveItemDir(requestedItem);
 
   const normalized = normalizedBitmapReason(reason);
+  const selectionSeed = mixBitmapAnimationSeed(normalized, seed);
   if (reasonIn(normalized, ERROR_REASONS)) {
-    return pickFromPool(ERROR_ITEM_POOL, seed);
+    return pickFromPool(ERROR_ITEM_POOL, selectionSeed);
   }
   if (reasonIn(normalized, SUCCESS_REASONS)) {
-    return pickFromPool(SUCCESS_ITEM_POOL, seed);
+    return pickFromPool(SUCCESS_ITEM_POOL, selectionSeed);
   }
   if (reasonIn(normalized, IDLE_REASONS) || reasonIn(normalized, CHURN_REASONS)) {
-    return pickFromPool(IDLE_ITEM_POOL, seed);
+    return pickFromPool(IDLE_ITEM_POOL, selectionSeed);
   }
   if (reasonIn(normalized, FIRE_REASONS)) {
-    return pickFromPool(FIRE_ITEM_POOL, seed);
+    return pickFromPool(FIRE_ITEM_POOL, selectionSeed);
   }
 
-  return pickFromPool(IDLE_ITEM_POOL, seed);
+  return pickFromPool(IDLE_ITEM_POOL, selectionSeed);
 }
 
 export function loadBitmapBaseTrait(base: string): BitmapBaseTrait {
@@ -608,6 +624,7 @@ export function buildBitmapStatusArt(
   const trait = loadBitmapBaseTrait(baseKey);
   const resolvedItem = resolveBitmapItemSelection(requestedItem, reason, seed);
   const profile = resolveBitmapAnimationProfile(reason, seed);
+  const animationSeed = mixBitmapAnimationSeed(normalizedBitmapReason(reason), seed);
   const idle = composeBaseCanvas(trait);
   const move = applyBitmapAction(trait.key, "move")[1];
   const blink = applyBitmapAction(trait.key, "blink")[1];
@@ -618,7 +635,7 @@ export function buildBitmapStatusArt(
   const mode = detectRenderMode();
   const itemOffset = 4;
   const itemIndices = itemCanvases.map((_, index) => itemOffset + index);
-  const itemBurst = buildItemBurstSequence(itemIndices, seed, profile.itemBurst);
+  const itemBurst = buildItemBurstSequence(itemIndices, animationSeed, profile.itemBurst);
 
   return {
     bitmapBase: trait.key,
