@@ -31,6 +31,8 @@ function currentBitmapReactionContext(): { reason?: string; seed: number } {
 
 // ─── Hat art ────────────────────────────────────────────────────────────────
 
+// Legacy ASCII hat art is still exported for old TUI surfaces, but BitmapPunks
+// previews must not overlay these on top of vendored BASE art.
 export const HAT_ART: Record<Hat, string> = {
   none:      "",
   crown:     "   \\^^^/    ",
@@ -41,28 +43,6 @@ export const HAT_ART: Record<Hat, string> = {
   beanie:    "   (___)    ",
   tinyduck:  "    ,>      ",
 };
-
-// Wyvern line 0 is `}       {` (7 inner chars between horns).
-// These replace that line so the hat sits between the horns.
-const WYVERN_HAT: Partial<Record<Hat, string>> = {
-  crown:     "} \\^^^/ {",  // \^^^/ (5) centered in 7
-  tophat:    "} [___] {",   // [___] (5) centered in 7
-  propeller: "}  -+-  {",   // -+- (3) centered in 7
-  halo:      "} (   ) {",   // (   ) (5) centered in 7
-  wizard:    "}  /^\\  {",  // /^\ (3) centered in 7
-  beanie:    "} (___) {",   // (___) (5) centered in 7
-  tinyduck:  "}  ,>   {",   // ,> (2) slightly left of center
-};
-
-function applyHat(species: Species, hat: Hat, art: string[]): void {
-  if (hat === "none") return;
-  if (species === "wyvern") {
-    const wyvernLine = WYVERN_HAT[hat];
-    if (wyvernLine) art[0] = wyvernLine;
-  } else if (!art[0].trim()) {
-    art[0] = HAT_ART[hat];
-  }
-}
 
 // ─── Rarity ANSI colors ────────────────────────────────────────────────────
 
@@ -178,7 +158,6 @@ export function renderCompanionCard(
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? `${SHINY_COLOR}\u2728 ${NC}` : "";
   const art = getArtFrame(bones.species, bones.eye, frame, bitmapBase);
-  applyHat(bones.species, bones.hat, art);
   const artWidth = art.reduce((max, line) => Math.max(max, displayWidth(line)), 0);
 
   // Build the card
@@ -286,8 +265,7 @@ export function renderCompanionCardMarkdown(
   const dot = RARITY_DOT[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? " \u2728" : "";
-  const art = getArtFrame(bones.species, bones.eye, frame);
-  applyHat(bones.species, bones.hat, art);
+  const art = getArtFrame(bones.species, bones.eye, frame, bitmapBase);
 
   // Strip empty lines from art for cleaner rendering
   const artLines = art.filter((l) => l.trim().length > 0);

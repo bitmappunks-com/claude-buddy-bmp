@@ -199,6 +199,20 @@ describe("render metadata", () => {
     expect(card).not.toContain("hat:");
   });
 
+  test("terminal card does not overlay legacy ASCII hats onto BitmapPunks art", () => {
+    const card = renderCompanionCard(
+      bones({ species: "ghost", eye: "◉", hat: "halo" }),
+      "Waffle",
+      "Keeps watch.",
+      undefined,
+      0,
+      64,
+      "43-snowman_female",
+    );
+
+    expect(card).not.toContain("(   )");
+  });
+
   test("markdown card names the active BitmapPunks base instead of the old hello seed", () => {
     const expectedBase = getStatusFrames(bones()).bitmapBase;
     const markdown = renderCompanionCardMarkdown(
