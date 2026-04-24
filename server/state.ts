@@ -314,7 +314,6 @@ export interface BuddyConfig {
   bubbleMargin: number;
   useCombinedStatus: boolean;
   activeBitmapBase?: string;
-  activeBitmapItem?: string;
   rainbowColors?: string[];
 }
 
@@ -330,10 +329,15 @@ const DEFAULT_CONFIG: BuddyConfig = {
   useCombinedStatus: false,
 };
 
+function stripLegacyConfig(config: BuddyConfig & Record<string, unknown>): BuddyConfig {
+  delete config.activeBitmapItem;
+  return config;
+}
+
 export function loadConfig(): BuddyConfig {
   try {
     const data = JSON.parse(readFileSync(CONFIG_FILE, "utf8"));
-    return { ...DEFAULT_CONFIG, ...data };
+    return stripLegacyConfig({ ...DEFAULT_CONFIG, ...data });
   } catch {
     return { ...DEFAULT_CONFIG };
   }
@@ -342,7 +346,7 @@ export function loadConfig(): BuddyConfig {
 export function saveConfig(config: Partial<BuddyConfig>): BuddyConfig {
   mkdirSync(STATE_DIR, { recursive: true });
   const current = loadConfig();
-  const merged = { ...current, ...config };
+  const merged = stripLegacyConfig({ ...current, ...config });
   writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2));
   return merged;
 }

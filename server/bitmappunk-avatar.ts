@@ -172,7 +172,6 @@ export function listBitmapBaseTraits(): BitmapBaseInfo[] {
 }
 
 export const DEFAULT_BITMAP_BASE = listBitmapBaseTraits()[0]?.key ?? "100-solana_male";
-export const DEFAULT_BITMAP_ITEM = "auto";
 
 const IDLE_ITEM_POOL = ["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"] as const;
 const ERROR_ITEM_POOL = ["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"] as const;
@@ -220,8 +219,6 @@ type BitmapAnimationProfile = {
   outro: number[];
   itemBurst: number;
 };
-
-type BitmapItemChoice = string | undefined;
 
 function pickFromPool(pool: readonly string[], seed: number): string {
   const idx = Math.abs(seed) % pool.length;
@@ -340,8 +337,8 @@ function buildItemBurstSequence(itemIndices: number[], seed: number, count: numb
   });
 }
 
-function shouldUseMixedIdleItems(requestedItem: string, reason?: string): boolean {
-  return (!requestedItem || requestedItem === "auto") && !normalizedBitmapReason(reason);
+function shouldUseMixedIdleItems(reason?: string): boolean {
+  return !normalizedBitmapReason(reason);
 }
 
 function composeMixedIdleItemFrames(baseKey: string, seed: number, frameCount: number = 8): BitmapCanvas[] {
@@ -384,12 +381,9 @@ export function resolveBitmapBaseSelection(requestedBase?: string): string {
 }
 
 export function resolveBitmapItemSelection(
-  requestedItem: BitmapItemChoice,
   reason?: string,
   seed: number = 0,
 ): string {
-  if (requestedItem && requestedItem !== "auto") return resolveItemDir(requestedItem);
-
   const normalized = normalizedBitmapReason(reason);
   const selectionSeed = mixBitmapAnimationSeed(normalized, seed);
   if (reasonIn(normalized, STREAK_REASONS)) {
@@ -598,7 +592,7 @@ export function applyBitmapAction(baseKey: string, actionName: string): BitmapCa
   });
 }
 
-export function composeBitmapItemFrames(baseKey: string, itemKey: string = DEFAULT_BITMAP_ITEM): BitmapCanvas[] {
+export function composeBitmapItemFrames(baseKey: string, itemKey: string): BitmapCanvas[] {
   const baseCanvas = composeBaseCanvas(loadBitmapBaseTrait(baseKey));
   const item = loadBitmapItem(itemKey);
 
@@ -681,18 +675,17 @@ export function renderCanvas(canvas: BitmapCanvas, mode: RenderMode = detectRend
 
 export function buildBitmapStatusArt(
   baseKey: string = DEFAULT_BITMAP_BASE,
-  requestedItem: string = DEFAULT_BITMAP_ITEM,
   reason?: string,
   seed: number = 0,
 ): BitmapStatusArt {
   const trait = loadBitmapBaseTrait(baseKey);
-  const resolvedItem = resolveBitmapItemSelection(requestedItem, reason, seed);
+  const resolvedItem = resolveBitmapItemSelection(reason, seed);
   const profile = resolveBitmapAnimationProfile(reason, seed);
   const animationSeed = mixBitmapAnimationSeed(normalizedBitmapReason(reason), seed);
   const idle = composeBaseCanvas(trait);
   const move = applyBitmapAction(trait.key, "move")[1];
   const blink = applyBitmapAction(trait.key, "blink")[1];
-  const useMixedIdleItems = shouldUseMixedIdleItems(requestedItem, reason);
+  const useMixedIdleItems = shouldUseMixedIdleItems(reason);
   const itemCanvases = useMixedIdleItems
     ? composeMixedIdleItemFrames(trait.key, animationSeed)
     : composeBitmapItemFrames(trait.key, resolvedItem);

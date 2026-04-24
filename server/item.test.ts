@@ -3,35 +3,13 @@ import { mkdtempSync, readFileSync, existsSync, mkdirSync, writeFileSync } from 
 import { join } from "path";
 import { tmpdir } from "os";
 
-describe("cli item command", () => {
-  test("does not expose direct bitmap item selection from the CLI", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-item-command-"));
+import { loadConfig, saveConfig, STATE_DIR } from "./state.ts";
+
+describe("legacy bitmap item configuration", () => {
+  test("removes the old bitmap item command entirely", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-item-removed-"));
     mkdirSync(profileDir, { recursive: true });
-    writeFileSync(join(profileDir, "claude.json"), JSON.stringify({ userID: "item-test-user" }));
-
-    const proc = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "item", "1749-sleep_bubble"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(proc.exitCode).toBe(1);
-    expect(Buffer.from(proc.stderr).toString("utf8")).toContain("ITEM choice is automatic");
-
-    const stateDir = join(profileDir, "buddy-state");
-    expect(existsSync(join(stateDir, "config.json"))).toBe(false);
-    expect(existsSync(join(stateDir, "status.json"))).toBe(false);
-  });
-
-  test("supports auto item mode for behavior-driven animation selection", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-item-auto-"));
-    mkdirSync(profileDir, { recursive: true });
-    writeFileSync(join(profileDir, "claude.json"), JSON.stringify({ userID: "item-auto-user" }));
+    writeFileSync(join(profileDir, "claude.json"), JSON.stringify({ userID: "item-removed-user" }));
 
     const proc = Bun.spawnSync({
       cmd: [process.execPath, "run", "cli/index.ts", "item", "auto"],
@@ -44,11 +22,23 @@ describe("cli item command", () => {
       stdout: "pipe",
     });
 
-    expect(proc.exitCode).toBe(0);
-    expect(Buffer.from(proc.stdout).toString("utf8")).toContain("auto");
+    expect(proc.exitCode).toBe(1);
+    expect(Buffer.from(proc.stderr).toString("utf8")).toContain("Unknown command: item");
+    expect(Buffer.from(proc.stdout).toString("utf8")).not.toContain("item auto");
+    expect(existsSync(join(profileDir, "buddy-state", "config.json"))).toBe(false);
+  });
 
-    const stateDir = join(profileDir, "buddy-state");
-    const config = JSON.parse(readFileSync(join(stateDir, "config.json"), "utf8"));
-    expect(config.activeBitmapItem).toBe("auto");
+  test("saveConfig drops stale activeBitmapItem from old config files", () => {
+    mkdirSync(STATE_DIR, { recursive: true });
+    const configPath = join(STATE_DIR, "config.json");
+    writeFileSync(configPath, JSON.stringify({ activeBitmapItem: "1-420", bubbleWidth: 32 }, null, 2));
+
+    saveConfig({ activeBitmapBase: "100-solana_male" } as Parameters<typeof saveConfig>[0]);
+    const config = JSON.parse(readFileSync(configPath, "utf8"));
+
+    expect(loadConfig()).not.toHaveProperty("activeBitmapItem");
+    expect(config).not.toHaveProperty("activeBitmapItem");
+    expect(config.activeBitmapBase).toBe("100-solana_male");
+    expect(config.bubbleWidth).toBe(32);
   });
 });

@@ -59,9 +59,6 @@ switch (command) {
   case "base":
     await import("./base.ts");
     break;
-  case "item":
-    await import("./item.ts");
-    break;
   case "help":
   case "--help":
   case "-h":
@@ -92,7 +89,6 @@ Buddy:
   base <trait>      Choose the active BitmapPunks BASE trait for rendering
   base list [query] Browse or filter BitmapPunks BASE traits
   base default      Reset BitmapPunks BASE to the default trait
-  item auto         Reset BitmapPunks ITEM animation mode to automatic behavior-driven selection
 
   upgrade           Pull latest version + reinstall (add --check to just check)
 

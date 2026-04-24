@@ -7,7 +7,7 @@
  */
 
 import { type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
-import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, DEFAULT_BITMAP_ITEM, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
+import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
 import { loadConfig, loadReaction } from "./state.ts";
 
 function currentBitmapBase(): string {
@@ -16,13 +16,6 @@ function currentBitmapBase(): string {
   } catch {
     return DEFAULT_BITMAP_BASE;
   }
-}
-
-function currentBitmapItem(): string {
-  // ITEM is intentionally not user-selectable. Older configs may still contain
-  // explicit item keys from pre-auto builds; ignore them so runtime status art
-  // always flows through behavior/time-seeded automatic item selection.
-  return DEFAULT_BITMAP_ITEM;
 }
 
 function currentBitmapReactionContext(): { reason?: string; seed: number } {
@@ -148,7 +141,7 @@ function dpad(s: string, targetW: number): string {
 
 export function getArtFrame(_species: Species, _eye: Eye, frame: number = 0): string[] {
   const ctx = currentBitmapReactionContext();
-  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem(), ctx.reason, ctx.seed);
+  const art = buildBitmapStatusArt(currentBitmapBase(), ctx.reason, ctx.seed);
   return art.frames[frame % art.frames.length].split("\n");
 }
 
@@ -161,7 +154,7 @@ export function getStatusFrames(_bones: BuddyBones): {
   frameSequence: number[];
 } {
   const ctx = currentBitmapReactionContext();
-  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem(), ctx.reason, ctx.seed);
+  const art = buildBitmapStatusArt(currentBitmapBase(), ctx.reason, ctx.seed);
   return {
     bitmapBase: art.bitmapBase,
     bitmapItem: art.bitmapItem,

@@ -135,7 +135,6 @@ describe("getStatusFrames", () => {
   });
 
   test("auto item mode responds to the latest buddy reaction reason", () => {
-    saveConfig({ activeBitmapItem: "auto" });
     saveReaction("*grimaces at the traceback*", "error");
     const errored = getStatusFrames(bones());
     const erroredItem = errored.bitmapItem!;
@@ -149,7 +148,7 @@ describe("getStatusFrames", () => {
   });
 
   test("legacy explicit item config is ignored so statusline items remain automatic", () => {
-    saveConfig({ activeBitmapItem: "1-420" });
+    saveConfig({ activeBitmapItem: "1-420" } as Parameters<typeof saveConfig>[0]);
     saveReaction("*quietly celebrates*", "all-green");
 
     const succeeded = getStatusFrames(bones());

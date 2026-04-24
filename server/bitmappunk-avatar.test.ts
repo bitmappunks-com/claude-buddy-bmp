@@ -86,26 +86,22 @@ describe("legacy avatar assets", () => {
 });
 
 describe("bitmap item selection", () => {
-  test("keeps an explicitly selected item even when a reaction reason exists", () => {
-    expect(resolveBitmapItemSelection("1749-sleep_bubble", "error", 7)).toBe("1749-sleep_bubble");
-  });
-
   test("maps all quality failure reasons to a themed error item when auto mode is used", () => {
     for (const reason of ["error", "test-fail", "lint-fail", "type-error", "build-fail", "security-warning", "deprecation", "merge-conflict"] as const) {
-      const chosen = resolveBitmapItemSelection("auto", reason, 0);
+      const chosen = resolveBitmapItemSelection(reason, 0);
       expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosen);
     }
   });
 
   test("maps build/release success reasons to an upbeat item when auto mode is used", () => {
-    const chosen = resolveBitmapItemSelection("auto", "all-green", 1);
+    const chosen = resolveBitmapItemSelection("all-green", 1);
     expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(chosen);
   });
 
   test("maps error-streak reasons to stressed error items instead of upbeat success items", () => {
     const successItems = ["1744-bubble_gum_large", "1749-sleep_bubble"];
     for (const reason of ["streak-3", "streak-5", "streak-10", "streak-20"] as const satisfies readonly ReactionReason[]) {
-      const status = buildBitmapStatusArt("100-solana_male", "auto", reason, 0);
+      const status = buildBitmapStatusArt("100-solana_male", reason, 0);
       expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(status.bitmapItem!);
       expect(successItems).not.toContain(status.bitmapItem!);
       expect(status.frameSequence.filter((idx) => idx >= 4).length).toBeGreaterThanOrEqual(5);
@@ -115,43 +111,43 @@ describe("bitmap item selection", () => {
 
   test("maps file-work reasons to a fire animation pool when auto mode is used", () => {
     for (const reason of ["regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file", "env-file", "test-file", "config-file", "makefile", "package-file", "proto-file"] as const) {
-      const chosen = resolveBitmapItemSelection("auto", reason, 2);
+      const chosen = resolveBitmapItemSelection(reason, 2);
       expect(["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"]).toContain(chosen);
     }
   });
 
   test("keeps churn/editing reasons automatic but distinct from failure and success pools", () => {
-    const chosen = resolveBitmapItemSelection("auto", "debug-loop", 3);
+    const chosen = resolveBitmapItemSelection("debug-loop", 3);
     expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(chosen);
   });
 
   test("falls back to a deterministic idle pool choice when no reason is provided", () => {
-    expect(resolveBitmapItemSelection(undefined, undefined, 5)).toBe(resolveBitmapItemSelection(undefined, undefined, 5));
-    expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(resolveBitmapItemSelection(undefined, undefined, 5));
+    expect(resolveBitmapItemSelection(undefined, 5)).toBe(resolveBitmapItemSelection(undefined, 5));
+    expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(resolveBitmapItemSelection(undefined, 5));
   });
   test("maps additional file, language, temporal, and recovery triggers instead of dropping them into generic idle", () => {
     const fireReasons = ["doc-file", "binary-file", "gitignore", "readme", "lang-typescript"] as const satisfies readonly ReactionReason[];
     for (const reason of fireReasons) {
-      const chosen = resolveBitmapItemSelection("auto", reason, 2);
+      const chosen = resolveBitmapItemSelection(reason, 2);
       expect(["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"]).toContain(chosen);
     }
 
     const errorReasons = ["late-night-error", "weekend-conflict", "marathon-test-fail", "build-after-push"] as const satisfies readonly ReactionReason[];
     for (const reason of errorReasons) {
-      const chosen = resolveBitmapItemSelection("auto", reason, 0);
+      const chosen = resolveBitmapItemSelection(reason, 0);
       expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosen);
     }
 
     const successReasons = ["recovery-from-merge-conflict"] as const satisfies readonly ReactionReason[];
     for (const reason of successReasons) {
-      const chosen = resolveBitmapItemSelection("auto", reason, 1);
+      const chosen = resolveBitmapItemSelection(reason, 1);
       expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(chosen);
     }
   });
 
   test("maps chaos triggers to a broad automatic pool with a jagged animation profile", () => {
-    const first = buildBitmapStatusArt("100-solana_male", "auto", "chaos", 0);
-    const second = buildBitmapStatusArt("100-solana_male", "auto", "chaos", 1);
+    const first = buildBitmapStatusArt("100-solana_male", "chaos", 0);
+    const second = buildBitmapStatusArt("100-solana_male", "chaos", 1);
 
     expect([
       "1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble",
@@ -169,9 +165,9 @@ describe("bitmap item selection", () => {
   });
 
   test("keeps newly classified triggers on behavior-specific animation profiles", () => {
-    const languageStatus = buildBitmapStatusArt("100-solana_male", "auto", "lang-typescript", 0);
-    const holidayStatus = buildBitmapStatusArt("100-solana_male", "auto", "halloween", 0);
-    const recoveryStatus = buildBitmapStatusArt("100-solana_male", "auto", "recovery-from-merge-conflict", 0);
+    const languageStatus = buildBitmapStatusArt("100-solana_male", "lang-typescript", 0);
+    const holidayStatus = buildBitmapStatusArt("100-solana_male", "halloween", 0);
+    const recoveryStatus = buildBitmapStatusArt("100-solana_male", "recovery-from-merge-conflict", 0);
 
     expect(languageStatus.frameSequence.filter((idx) => idx >= 4)).toHaveLength(5);
     expect(holidayStatus.frameSequence.filter((idx) => idx >= 4)).toHaveLength(4);
@@ -182,10 +178,10 @@ describe("bitmap item selection", () => {
   });
 
   test("gives git and temporal triggers distinct automatic cadences instead of generic idle looping", () => {
-    const idleStatus = buildBitmapStatusArt("100-solana_male", "auto", "idle", 0);
-    const commitStatus = buildBitmapStatusArt("100-solana_male", "auto", "commit", 0);
-    const pushStatus = buildBitmapStatusArt("100-solana_male", "auto", "push", 0);
-    const lateNightStatus = buildBitmapStatusArt("100-solana_male", "auto", "late-night", 0);
+    const idleStatus = buildBitmapStatusArt("100-solana_male", "idle", 0);
+    const commitStatus = buildBitmapStatusArt("100-solana_male", "commit", 0);
+    const pushStatus = buildBitmapStatusArt("100-solana_male", "push", 0);
+    const lateNightStatus = buildBitmapStatusArt("100-solana_male", "late-night", 0);
 
     for (const status of [commitStatus, pushStatus, lateNightStatus]) {
       expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(status.bitmapItem!);
@@ -201,7 +197,7 @@ describe("bitmap item selection", () => {
 
 describe("buildBitmapStatusArt", () => {
   test("builds ANSI-rendered status frames from vendored base, action, and item data", () => {
-    const status = buildBitmapStatusArt("100-solana_male", "auto", "error", 0);
+    const status = buildBitmapStatusArt("100-solana_male", "error", 0);
     const chosenItem = status.bitmapItem!;
     expect(status.bitmapBase).toBe("100-solana_male");
     expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosenItem);
@@ -219,8 +215,8 @@ describe("buildBitmapStatusArt", () => {
   });
 
   test("varies the auto item burst cadence with the seed instead of replaying a simple sequential slice", () => {
-    const first = buildBitmapStatusArt("100-solana_male", "1-420", undefined, 0);
-    const second = buildBitmapStatusArt("100-solana_male", "1-420", undefined, 1);
+    const first = buildBitmapStatusArt("100-solana_male", undefined, 0);
+    const second = buildBitmapStatusArt("100-solana_male", undefined, 1);
 
     expect(first.frameSequence).toEqual([0, 0, 0, 1, 0, 0, 4, 5, 6, 0, 3, 0, 2, 0, 0]);
     expect(second.frameSequence).toEqual([0, 0, 1, 0, 0, 3, 5, 10, 7, 0, 2, 0, 0, 0]);
@@ -228,18 +224,18 @@ describe("buildBitmapStatusArt", () => {
   });
 
   test("auto idle status frames include multiple item animations instead of only smoking", () => {
-    const auto = buildBitmapStatusArt("100-solana_male", "auto", undefined, 0);
-    const smokingOnly = buildBitmapStatusArt("100-solana_male", "1-420", undefined, 0);
-    const smokingFrames = new Set(smokingOnly.frames.slice(4));
+    const auto = buildBitmapStatusArt("100-solana_male", undefined, 0);
+    const itemFrames = auto.frames.slice(4);
 
+    expect(auto.bitmapItem).toBe("auto");
     expect(auto.frames).toHaveLength(12);
-    expect(auto.frames.slice(4).some((frame) => !smokingFrames.has(frame))).toBe(true);
+    expect(new Set(itemFrames).size).toBeGreaterThan(2);
     expect(auto.frameSequence.some((idx) => idx >= 4)).toBe(true);
   });
 
   test("uses different reaction-specific sequence profiles for adjacent time buckets", () => {
-    const first = buildBitmapStatusArt("100-solana_male", "auto", "lint-fail", 0);
-    const second = buildBitmapStatusArt("100-solana_male", "auto", "lint-fail", 1);
+    const first = buildBitmapStatusArt("100-solana_male", "lint-fail", 0);
+    const second = buildBitmapStatusArt("100-solana_male", "lint-fail", 1);
 
     expect(first.frameSequence).not.toEqual(second.frameSequence);
     expect(first.frameSequence.filter((idx) => idx >= 4).length).toBeGreaterThanOrEqual(4);
@@ -247,8 +243,8 @@ describe("buildBitmapStatusArt", () => {
   });
 
   test("mixes the reaction reason into automatic item and burst selection for same-bucket behavior changes", () => {
-    const errored = buildBitmapStatusArt("100-solana_male", "auto", "error", 0);
-    const tested = buildBitmapStatusArt("100-solana_male", "auto", "test-fail", 0);
+    const errored = buildBitmapStatusArt("100-solana_male", "error", 0);
+    const tested = buildBitmapStatusArt("100-solana_male", "test-fail", 0);
 
     expect(errored.bitmapItem).not.toBe(tested.bitmapItem);
     expect(errored.frameSequence).not.toEqual(tested.frameSequence);
