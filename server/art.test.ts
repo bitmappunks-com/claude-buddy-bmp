@@ -14,7 +14,7 @@ import {
   renderCompanionCardMarkdown,
   renderStatusLine,
 } from "./art.ts";
-import { DEFAULT_BITMAP_FRAME } from "./bitmappunk-avatar.ts";
+import { DEFAULT_BITMAP_FRAME, listBitmapBaseTraits } from "./bitmappunk-avatar.ts";
 import { SPECIES, type BuddyBones } from "./engine.ts";
 import { saveConfig, saveReaction } from "./state.ts";
 
@@ -99,6 +99,14 @@ describe("getStatusFrames", () => {
         expect(lines).toHaveLength(DEFAULT_BITMAP_FRAME.length);
         expect(body).toMatch(/\x1b\[(?:38|48);(?:2|5);/);
       }
+    }
+  });
+
+  test("every BitmapPunks base renders without rejecting vendored color formats", () => {
+    for (const base of listBitmapBaseTraits()) {
+      const { frames } = getStatusFrames(bones(), base.key);
+      expect(frames.length).toBeGreaterThan(0);
+      expect(frames[0]).toMatch(/\x1b\[(?:38|48);(?:2|5);/);
     }
   });
 

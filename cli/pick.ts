@@ -24,7 +24,7 @@ import {
   type Rarity, type StatName, type Eye, type Hat,
   type BuddyBones, type Companion,
 } from "../server/engine.ts";
-import { renderCompanionCard } from "../server/art.ts";
+import { displayWidth, renderCompanionCard } from "../server/art.ts";
 import { DEFAULT_BITMAP_BASE, bitmapBaseLabelForKey, formatBitmapBaseLabel, listBitmapBaseTraits, pickBitmapBaseForSeed, resolveBitmapBaseSelection } from "../server/bitmappunk-avatar.ts";
 import { randomBytes } from "crypto";
 
@@ -46,37 +46,30 @@ const GR = "\x1b[90m";
 const YL = "\x1b[33m";
 const GN = "\x1b[32m";
 
-function stripAnsi(s: string): string { return s.replace(/\x1b\[[^m]*m/g, ""); }
-
-// Wide characters: emojis, some Unicode symbols take 2 display columns
-function charWidth(cp: number): number {
-  // Emoji modifiers, variation selectors, ZWJ
-  if (cp >= 0xFE00 && cp <= 0xFE0F) return 0;
-  if (cp === 0x200D) return 0;
-  // Common wide ranges: CJK, emoji, fullwidth, braille, box-drawing stars etc.
-  if (cp >= 0x1F000) return 2;  // Most emoji (sparkles ✨ = U+2728 is below this)
-  if (cp === 0x2728) return 2;  // ✨ Sparkles
-  if (cp >= 0x2600 && cp <= 0x27BF) return 1;  // Misc symbols (★ ☆ etc.) — typically 1 col
-  if (cp >= 0x2500 && cp <= 0x257F) return 1;  // Box drawing
-  if (cp >= 0x2580 && cp <= 0x259F) return 1;  // Block elements (█░)
-  if (cp >= 0x3000 && cp <= 0x9FFF) return 2;  // CJK
-  if (cp >= 0xF900 && cp <= 0xFAFF) return 2;  // CJK compat
-  if (cp >= 0xFF01 && cp <= 0xFF60) return 2;  // Fullwidth
-  return 1;
-}
-
-function vlen(s: string): number {
-  const clean = stripAnsi(s);
-  let w = 0;
-  for (const ch of clean) {
-    w += charWidth(ch.codePointAt(0)!);
+function fitAnsi(s: string, w: number): string {
+  if (w <= 0) return "";
+  let out = "";
+  let used = 0;
+  let sawAnsi = false;
+  const re = /\x1b\[[^m]*m|[\s\S]/gu;
+  for (const token of s.matchAll(re)) {
+    const part = token[0];
+    if (part.startsWith("\x1b[")) {
+      sawAnsi = true;
+      out += part;
+      continue;
+    }
+    const cw = displayWidth(part);
+    if (used + cw > w) break;
+    out += part;
+    used += cw;
   }
-  return w;
+  if (sawAnsi) out += N;
+  return used < w ? out + " ".repeat(w - used) : out;
 }
 
 function rpad(s: string, w: number): string {
-  const v = vlen(s);
-  return v < w ? s + " ".repeat(w - v) : s;
+  return fitAnsi(s, w);
 }
 
 // ─── Option lists ─────────────────────────────────────────────────────────────
@@ -325,8 +318,10 @@ function previewPane(s: State): string[] {
   if (!c) return [`  ${GR}no preview${N}`];
   // Calculate available width for the right pane (total cols - left pane - separator)
   const cols = Math.max(80, process.stdout.columns || 80);
-  const rightW = cols - LEFT_W - 3;
-  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW, c.bitmapBase).split("\n");
+  const rightW = Math.max(24, cols - LEFT_W - 2);
+  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW, c.bitmapBase)
+    .split("\n")
+    .map((line) => fitAnsi(line, rightW));
 }
 
 // ─── Screen render ────────────────────────────────────────────────────────────
@@ -354,7 +349,7 @@ function drawScreen(s: State): void {
   // Content rows
   for (let i = 0; i < contentH; i++) {
     const l = rpad(leftLines[i] ?? "", LEFT_W);
-    const r = rightLines[i] ?? "";
+    const r = fitAnsi(rightLines[i] ?? "", Math.max(0, cols - LEFT_W - 2));
     out += l + GR + "│" + N + " " + r + "\n";
   }
 
@@ -629,4 +624,8 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main();
+export const __test = { fitAnsi, rpad, LEFT_W };
+
+if (import.meta.main) {
+  main();
+}

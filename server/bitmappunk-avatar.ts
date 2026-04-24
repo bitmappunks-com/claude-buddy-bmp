@@ -105,7 +105,7 @@ function parseGender(name: string): BitmapGender {
 }
 
 function normalizeColor(color: string): string | null {
-  const rgba = color.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*(\d+)\)$/);
+  const rgba = color.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*((?:\d+)|(?:\d*\.\d+))\)$/);
   if (rgba) {
     if (Number(rgba[4]) === 0) return null;
     return `rgb(${rgba[1]}, ${rgba[2]}, ${rgba[3]})`;
