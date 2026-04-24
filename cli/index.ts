@@ -90,6 +90,8 @@ Buddy:
   hunt              Search for a specific buddy (non-interactive)
   verify            Verify what buddy your current ID produces
   base <trait>      Choose the active BitmapPunks BASE trait for rendering
+  base list [query] Browse or filter BitmapPunks BASE traits
+  base default      Reset BitmapPunks BASE to the default trait
   item auto         Reset BitmapPunks ITEM animation mode to automatic behavior-driven selection
 
   upgrade           Pull latest version + reinstall (add --check to just check)

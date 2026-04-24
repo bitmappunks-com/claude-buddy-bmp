@@ -192,10 +192,10 @@ const ERROR_REASONS = [
   "error", "test-fail", "lint-fail", "type-error", "build-fail", "security-warning", "deprecation", "merge-conflict",
   "frustrated", "stuck", "late-night-error", "marathon-error", "weekend-conflict", "build-after-push", "marathon-test-fail",
 ] as const satisfies readonly ReactionReason[];
+const STREAK_REASONS = ["streak-3", "streak-5", "streak-10", "streak-20"] as const satisfies readonly ReactionReason[];
 const SUCCESS_REASONS = [
   "success", "all-green", "deploy", "release", "coverage", "happy",
   "recovery-from-error", "recovery-from-test-fail", "recovery-from-build-fail", "recovery-from-merge-conflict",
-  "streak-3", "streak-5", "streak-10", "streak-20",
 ] as const satisfies readonly ReactionReason[];
 const CHURN_REASONS = [
   "large-diff", "many-edits", "delete-file", "large-file", "create-file", "debug-loop", "write-spree", "search-heavy",
@@ -261,6 +261,13 @@ function pickProfile(seed: number, profiles: BitmapAnimationProfile[]): BitmapAn
 function resolveBitmapAnimationProfile(reason?: string, seed: number = 0): BitmapAnimationProfile {
   const normalized = normalizedBitmapReason(reason);
   const animationSeed = mixBitmapAnimationSeed(normalized, seed);
+
+  if (reasonIn(normalized, STREAK_REASONS)) {
+    return pickProfile(animationSeed, [
+      { intro: [0, 3, 1, 3, 0, 2], outro: [3, 0, 2, 0, 3, 0], itemBurst: 5 },
+      { intro: [0, 1, 0, 3, 1, 3], outro: [0, 3, 0, 2, 0, 0], itemBurst: 6 },
+    ]);
+  }
 
   if (reasonIn(normalized, ERROR_REASONS)) {
     return pickProfile(animationSeed, [
@@ -354,6 +361,9 @@ export function resolveBitmapItemSelection(
 
   const normalized = normalizedBitmapReason(reason);
   const selectionSeed = mixBitmapAnimationSeed(normalized, seed);
+  if (reasonIn(normalized, STREAK_REASONS)) {
+    return pickFromPool(ERROR_ITEM_POOL, selectionSeed);
+  }
   if (reasonIn(normalized, ERROR_REASONS)) {
     return pickFromPool(ERROR_ITEM_POOL, selectionSeed);
   }

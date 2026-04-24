@@ -102,6 +102,17 @@ describe("bitmap item selection", () => {
     expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(chosen);
   });
 
+  test("maps error-streak reasons to stressed error items instead of upbeat success items", () => {
+    const successItems = ["1744-bubble_gum_large", "1749-sleep_bubble"];
+    for (const reason of ["streak-3", "streak-5", "streak-10", "streak-20"] as const satisfies readonly ReactionReason[]) {
+      const status = buildBitmapStatusArt("100-solana_male", "auto", reason, 0);
+      expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(status.bitmapItem!);
+      expect(successItems).not.toContain(status.bitmapItem!);
+      expect(status.frameSequence.filter((idx) => idx >= 4).length).toBeGreaterThanOrEqual(5);
+      expect(status.frameSequence.slice(0, 6).some((idx) => idx === 1 || idx === 3)).toBe(true);
+    }
+  });
+
   test("maps file-work reasons to a fire animation pool when auto mode is used", () => {
     for (const reason of ["regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file", "env-file", "test-file", "config-file", "makefile", "package-file", "proto-file"] as const) {
       const chosen = resolveBitmapItemSelection("auto", reason, 2);
@@ -131,7 +142,7 @@ describe("bitmap item selection", () => {
       expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosen);
     }
 
-    const successReasons = ["recovery-from-merge-conflict", "streak-10"] as const satisfies readonly ReactionReason[];
+    const successReasons = ["recovery-from-merge-conflict"] as const satisfies readonly ReactionReason[];
     for (const reason of successReasons) {
       const chosen = resolveBitmapItemSelection("auto", reason, 1);
       expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(chosen);
