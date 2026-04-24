@@ -75,9 +75,9 @@ function showHelp() {
 claude-buddy — permanent coding companion for Claude Code
 
 Setup:
-  install-buddy     Set up MCP server, skill, hooks, and status line
+  install           Set up MCP server, skill, hooks, and status line
   upgrade           Pull latest version and reinstall integrations
-  enable            Same as install-buddy (re-enable after disable)
+  enable            Same as install (re-enable after disable)
   disable           Temporarily deactivate buddy (data preserved)
   uninstall         Remove all claude-buddy integrations
 
@@ -89,8 +89,6 @@ Buddy:
   base <trait>        Set BitmapPunks BASE directly (keeps buddy stats/name/etc unchanged)
   base list [query]   Browse or filter BitmapPunks BASE traits
   base default        Reset BitmapPunks BASE to the default trait
-
-  upgrade           Pull latest version + reinstall (add --check to just check)
 
 Settings:
   settings          Show current settings

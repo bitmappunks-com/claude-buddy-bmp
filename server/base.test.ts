@@ -295,8 +295,26 @@ describe("cli base command", () => {
     const output = Buffer.from(proc.stdout).toString("utf8");
     expect(output).toContain("pick              Interactive picker (saved/search + BitmapPunks BASE via [b])");
     expect(output).toContain("hunt              Guided BitmapPunks BASE selector (gender → type → variant)");
+    expect(output).toContain("install           Set up MCP server, skill, hooks, and status line");
+    expect(output).toContain("enable            Same as install (re-enable after disable)");
     expect(output).not.toContain("Search for a specific buddy");
     expect(output).not.toContain("base pick");
+    expect(output).not.toContain("install-buddy");
+    expect(output.match(/^  upgrade\s+/gm)?.length ?? 0).toBe(1);
+  });
+
+  test("secondary help and TUI copy do not expose legacy buddy hunting", () => {
+    const serverIndex = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
+    expect(serverIndex).toContain("bun run hunt            Guided BitmapPunks BASE selector");
+    expect(serverIndex).toContain("bun run pick            Interactive picker (saved/search + BitmapPunks BASE via [b])");
+    expect(serverIndex).not.toContain("bun run hunt            Search for specific buddy");
+
+    const tui = readFileSync(join(import.meta.dir, "..", "cli", "tui.tsx"), "utf8");
+    expect(tui).not.toContain("key: \"hunt\", icon");
+    expect(tui).not.toContain("Brute-force search for a specific buddy.");
+    expect(tui).not.toContain("Choose species, rarity, shiny flag, peak");
+    expect(tui).not.toContain("View all 16 milestone badges");
+    expect(tui).toContain("View all achievement badges you can");
   });
 
   test("falls back to the default marker when persisted base config is invalid", () => {
