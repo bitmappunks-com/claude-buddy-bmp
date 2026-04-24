@@ -259,8 +259,8 @@ claude-buddy/
 |---|---|
 | `bun run install-buddy` | Automated setup |
 | `bun run show` | Show buddy in terminal |
-| `bun run pick` | Interactive TUI to find and save your dream buddy |
-| `bun run hunt` | Legacy search (use `pick` instead) |
+| `bun run pick` | Interactive TUI to manage saved buddies and BitmapPunks BASE |
+| `bun run hunt` | Guided BitmapPunks BASE selector (gender → type → variant) |
 | `bun run doctor` | Full diagnostic report |
 | `bun run verify` | Verify buddy generation matches expected output |
 | `bun run backup` | Snapshot / restore state |
