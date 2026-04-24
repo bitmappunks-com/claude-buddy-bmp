@@ -18,4 +18,9 @@ describe("pick terminal layout", () => {
 
     expect(displayWidth(fitted)).toBe(42);
   });
+
+  test("preview card width stays compact on very wide terminals", () => {
+    expect(pickTest.rightPaneWidth(220)).toBeGreaterThan(pickTest.PREVIEW_CARD_MAX_W);
+    expect(pickTest.previewCardWidth(220)).toBe(pickTest.PREVIEW_CARD_MAX_W);
+  });
 });

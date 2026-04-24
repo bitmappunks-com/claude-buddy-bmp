@@ -161,6 +161,15 @@ function fresh(): State {
 // ─── Pane builders ────────────────────────────────────────────────────────────
 
 const LEFT_W = 36;
+const PREVIEW_CARD_MAX_W = 64;
+
+function rightPaneWidth(cols: number): number {
+  return Math.max(24, cols - LEFT_W - 2);
+}
+
+function previewCardWidth(cols: number): number {
+  return Math.min(rightPaneWidth(cols), PREVIEW_CARD_MAX_W);
+}
 
 function savedPane(s: State): string[] {
   const lines: string[] = [];
@@ -318,8 +327,9 @@ function previewPane(s: State): string[] {
   if (!c) return [`  ${GR}no preview${N}`];
   // Calculate available width for the right pane (total cols - left pane - separator)
   const cols = Math.max(80, process.stdout.columns || 80);
-  const rightW = Math.max(24, cols - LEFT_W - 2);
-  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW, c.bitmapBase)
+  const rightW = rightPaneWidth(cols);
+  const cardW = previewCardWidth(cols);
+  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, cardW, c.bitmapBase)
     .split("\n")
     .map((line) => fitAnsi(line, rightW));
 }
@@ -349,7 +359,7 @@ function drawScreen(s: State): void {
   // Content rows
   for (let i = 0; i < contentH; i++) {
     const l = rpad(leftLines[i] ?? "", LEFT_W);
-    const r = fitAnsi(rightLines[i] ?? "", Math.max(0, cols - LEFT_W - 2));
+    const r = fitAnsi(rightLines[i] ?? "", rightPaneWidth(cols));
     out += l + GR + "│" + N + " " + r + "\n";
   }
 
@@ -624,7 +634,7 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-export const __test = { fitAnsi, rpad, LEFT_W };
+export const __test = { fitAnsi, rpad, LEFT_W, PREVIEW_CARD_MAX_W, previewCardWidth, rightPaneWidth };
 
 if (import.meta.main) {
   main();
