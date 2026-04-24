@@ -13,10 +13,10 @@ import {
   getStatusFrames,
   renderCompanionCardMarkdown,
   renderStatusLine,
-  STATUS_FRAME_SEQUENCE,
 } from "./art.ts";
 import { DEFAULT_BITMAP_FRAME } from "./bitmappunk-avatar.ts";
 import { SPECIES, type BuddyBones } from "./engine.ts";
+import { saveConfig, saveReaction } from "./state.ts";
 
 describe("displayWidth", () => {
   test("ASCII has width equal to character count", () => {
@@ -82,10 +82,12 @@ describe("getStatusFrames", () => {
     ...overrides,
   });
 
-  test("produces 12 frames and a playback sequence that includes item interactions", () => {
+  test("produces 12 frames and a playback sequence that includes a non-looping item burst", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
     expect(frames).toHaveLength(12);
-    expect(frameSequence).toEqual([...STATUS_FRAME_SEQUENCE]);
+    const itemFrames = frameSequence.filter((idx) => idx >= 4);
+    expect(itemFrames.length).toBeGreaterThan(0);
+    expect(itemFrames.length).toBeLessThan(8);
   });
 
   test("every species produces 12 bitmap frames, each matching the generated avatar height", () => {
@@ -123,13 +125,27 @@ describe("getStatusFrames", () => {
     expect(withHat.frames[0]).toBe(plain.frames[0]);
   });
 
-  test("frame sequence references only valid frame indices and includes an item loop", () => {
+  test("frame sequence references only valid frame indices and includes an item burst", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
     expect(frameSequence.some((idx) => idx >= 4)).toBe(true);
     for (const idx of frameSequence) {
       expect(idx).toBeGreaterThanOrEqual(0);
       expect(idx).toBeLessThan(frames.length);
     }
+  });
+
+  test("auto item mode responds to the latest buddy reaction reason", () => {
+    saveConfig({ activeBitmapItem: "auto" });
+    saveReaction("*grimaces at the traceback*", "error");
+    const errored = getStatusFrames(bones());
+    const erroredItem = errored.bitmapItem!;
+    expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(erroredItem);
+
+    saveReaction("*quietly celebrates*", "all-green");
+    const succeeded = getStatusFrames(bones());
+    const succeededItem = succeeded.bitmapItem!;
+    expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(succeededItem);
+    expect(succeededItem).not.toBe(erroredItem);
   });
 });
 

@@ -90,7 +90,7 @@ Buddy:
   hunt              Search for a specific buddy (non-interactive)
   verify            Verify what buddy your current ID produces
   base <trait>      Choose the active BitmapPunks BASE trait for rendering
-  item <trait>      Choose the active BitmapPunks ITEM animation for rendering
+  item auto         Reset BitmapPunks ITEM animation mode to automatic behavior-driven selection
 
   upgrade           Pull latest version + reinstall (add --check to just check)
 

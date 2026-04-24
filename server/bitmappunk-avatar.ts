@@ -156,6 +156,10 @@ function resolveBaseDir(base: string): string {
   throw new Error(`Unknown BitmapPunks base: ${base}`);
 }
 
+function normalizeBitmapLookup(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
 export function listBitmapBaseTraits(): BitmapBaseInfo[] {
   if (!baseIndexCache) {
     baseIndexCache = readdirSync(BASE_DIR, { withFileTypes: true })
@@ -167,10 +171,139 @@ export function listBitmapBaseTraits(): BitmapBaseInfo[] {
 }
 
 export const DEFAULT_BITMAP_BASE = listBitmapBaseTraits()[0]?.key ?? "100-solana_male";
-export const DEFAULT_BITMAP_ITEM = "1-420";
+export const DEFAULT_BITMAP_ITEM = "auto";
+
+const IDLE_ITEM_POOL = ["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"] as const;
+const ERROR_ITEM_POOL = ["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"] as const;
+const SUCCESS_ITEM_POOL = ["1744-bubble_gum_large", "1749-sleep_bubble"] as const;
+const FIRE_ITEM_POOL = ["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"] as const;
+const ERROR_REASONS = ["error", "test-fail", "type-error", "build-fail", "security-warning", "deprecation", "frustrated", "stuck"] as const;
+const SUCCESS_REASONS = ["all-green", "deploy", "release", "coverage", "happy", "recovery-from-error", "recovery-from-test-fail", "recovery-from-build-fail"] as const;
+const IDLE_REASONS = ["push", "commit", "branch", "rebase", "stash", "tag", "late-night", "long-session", "marathon", "weekend", "monday", "friday"] as const;
+const FIRE_REASONS = ["css-file", "docker-file", "ci-file", "chaos"] as const;
+
+type BitmapAnimationProfile = {
+  intro: number[];
+  outro: number[];
+  itemBurst: number;
+};
+
+type BitmapItemChoice = string | undefined;
+
+function pickFromPool(pool: readonly string[], seed: number): string {
+  const idx = Math.abs(seed) % pool.length;
+  return pool[idx];
+}
+
+function normalizedBitmapReason(reason?: string): string {
+  return (reason ?? "").toLowerCase();
+}
+
+function reasonIn(reason: string, pool: readonly string[]): boolean {
+  return pool.includes(reason);
+}
+
+function resolveBitmapAnimationProfile(reason?: string): BitmapAnimationProfile {
+  const normalized = normalizedBitmapReason(reason);
+
+  if (reasonIn(normalized, ERROR_REASONS)) {
+    return {
+      intro: [0, 3, 0, 1, 0],
+      outro: [3, 0, 2, 0, 0],
+      itemBurst: 5,
+    };
+  }
+
+  if (reasonIn(normalized, SUCCESS_REASONS)) {
+    return {
+      intro: [0, 1, 0, 1, 0],
+      outro: [0, 2, 0, 0],
+      itemBurst: 4,
+    };
+  }
+
+  if (reasonIn(normalized, FIRE_REASONS)) {
+    return {
+      intro: [0, 1, 3, 1, 0],
+      outro: [0, 3, 0, 2, 0],
+      itemBurst: 5,
+    };
+  }
+
+  return {
+    intro: [0, 0, 0, 1, 0, 0],
+    outro: [0, 3, 0, 2, 0, 0],
+    itemBurst: reasonIn(normalized, IDLE_REASONS) ? 4 : 3,
+  };
+}
+
+function buildItemBurstSequence(itemIndices: number[], seed: number, count: number): number[] {
+  if (itemIndices.length === 0 || count <= 0) return [];
+  const start = Math.abs(seed) % itemIndices.length;
+  const burstLength = Math.min(count, itemIndices.length);
+  const direction = Math.abs(seed) % 2 === 0 ? 1 : -1;
+  const step = Math.abs(seed) % 3 === 0 ? 1 : itemIndices.length > 2 ? 3 : 1;
+  return Array.from({ length: burstLength }, (_, offset) => {
+    const index = (start + direction * offset * step) % itemIndices.length;
+    return itemIndices[(index + itemIndices.length) % itemIndices.length]!;
+  });
+}
+
+export function resolveBitmapBaseSelection(requestedBase?: string): string {
+  const trimmed = requestedBase?.trim();
+  if (!trimmed || normalizeBitmapLookup(trimmed) === "default") {
+    return DEFAULT_BITMAP_BASE;
+  }
+
+  const exactDir = readdirSync(BASE_DIR, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .find((dir) => dir === trimmed);
+  if (exactDir) return exactDir;
+
+  const normalized = normalizeBitmapLookup(trimmed);
+  const bases = listBitmapBaseTraits();
+  const matched = bases.find((base) => {
+    const aliases = [
+      base.key,
+      base.name,
+      base.displayName,
+      base.key.replace(/^\d+-/, ""),
+      String(base.id),
+    ];
+    return aliases.some((alias) => normalizeBitmapLookup(alias) === normalized);
+  });
+
+  if (matched) return matched.key;
+  throw new Error(`Unknown BitmapPunks base: ${requestedBase}`);
+}
+
+export function resolveBitmapItemSelection(
+  requestedItem: BitmapItemChoice,
+  reason?: string,
+  seed: number = 0,
+): string {
+  if (requestedItem && requestedItem !== "auto") return resolveItemDir(requestedItem);
+
+  const normalized = normalizedBitmapReason(reason);
+  if (reasonIn(normalized, ERROR_REASONS)) {
+    return pickFromPool(ERROR_ITEM_POOL, seed);
+  }
+  if (reasonIn(normalized, SUCCESS_REASONS)) {
+    return pickFromPool(SUCCESS_ITEM_POOL, seed);
+  }
+  if (reasonIn(normalized, IDLE_REASONS)) {
+    return pickFromPool(IDLE_ITEM_POOL, seed);
+  }
+  if (reasonIn(normalized, FIRE_REASONS)) {
+    return pickFromPool(FIRE_ITEM_POOL, seed);
+  }
+
+  return pickFromPool(IDLE_ITEM_POOL, seed);
+}
 
 export function loadBitmapBaseTrait(base: string): BitmapBaseTrait {
-  const dir = resolveBaseDir(base);
+  const dir = resolveBitmapBaseSelection(base);
   const cached = traitCache.get(dir);
   if (cached) return cached;
 
@@ -431,25 +564,32 @@ export function renderCanvas(canvas: BitmapCanvas, mode: RenderMode = detectRend
 
 export function buildBitmapStatusArt(
   baseKey: string = DEFAULT_BITMAP_BASE,
-  itemKey: string = DEFAULT_BITMAP_ITEM,
+  requestedItem: string = DEFAULT_BITMAP_ITEM,
+  reason?: string,
+  seed: number = 0,
 ): BitmapStatusArt {
   const trait = loadBitmapBaseTrait(baseKey);
+  const resolvedItem = resolveBitmapItemSelection(requestedItem, reason, seed);
+  const profile = resolveBitmapAnimationProfile(reason);
   const idle = composeBaseCanvas(trait);
   const move = applyBitmapAction(trait.key, "move")[1];
   const blink = applyBitmapAction(trait.key, "blink")[1];
-  const itemCanvases = composeBitmapItemFrames(trait.key, itemKey);
+  const itemCanvases = composeBitmapItemFrames(trait.key, resolvedItem);
   const canvases = [idle, move, cloneCanvas(idle), blink, ...itemCanvases];
   const framesHalfblock = canvases.map((canvas) => renderCanvas(canvas, "halfblock").join("\n"));
   const framesFullcell = canvases.map((canvas) => renderCanvas(canvas, "fullcell").join("\n"));
   const mode = detectRenderMode();
+  const itemOffset = 4;
+  const itemIndices = itemCanvases.map((_, index) => itemOffset + index);
+  const itemBurst = buildItemBurstSequence(itemIndices, seed, profile.itemBurst);
 
   return {
     bitmapBase: trait.key,
-    bitmapItem: itemKey,
+    bitmapItem: resolvedItem,
     frames: mode === "halfblock" ? [...framesHalfblock] : [...framesFullcell],
     framesHalfblock,
     framesFullcell,
-    frameSequence: [0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 4, 5, 6, 7, 8, 9, 10, 11, 0, 2, 0, 0, 0],
+    frameSequence: [...profile.intro, ...itemBurst, ...profile.outro],
   };
 }
 

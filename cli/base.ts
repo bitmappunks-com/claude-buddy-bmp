@@ -2,6 +2,7 @@
 
 import {
   loadCompanion,
+  loadConfig,
   resolveUserId,
   saveCompanion,
   saveConfig,
@@ -15,6 +16,7 @@ import {
 import {
   DEFAULT_BITMAP_BASE,
   listBitmapBaseTraits,
+  resolveBitmapBaseSelection,
 } from "../server/bitmappunk-avatar.ts";
 
 function normalizedArgs(): string[] {
@@ -41,19 +43,40 @@ function ensureCompanion(): Companion {
 
 const args = normalizedArgs();
 const bases = listBitmapBaseTraits();
-const current = saveConfig({}).activeBitmapBase ?? DEFAULT_BITMAP_BASE;
+const current = loadConfig().activeBitmapBase ?? DEFAULT_BITMAP_BASE;
+
+function printBaseList(): void {
+  console.log("Available BitmapPunks bases:");
+  for (const base of bases) {
+    const marker = base.key === current ? "*" : " ";
+    console.log(`${marker} ${String(base.id).padStart(3)}  ${base.key}  (${base.displayName})`);
+  }
+}
 
 if (!args[0]) {
   console.log(`Active BitmapPunks base: ${current}`);
+  console.log("Use `base list` to browse all bases or `base default` to reset to the default trait.");
   console.log(`Available bases: ${bases.slice(0, 12).map((base) => base.key).join(", ")}${bases.length > 12 ? ", ..." : ""}`);
   process.exit(0);
 }
 
 const requested = args[0];
-const chosen = bases.find((base) => base.key === requested || base.name === requested);
+if (requested === "list") {
+  printBaseList();
+  process.exit(0);
+}
+
+let chosen;
+try {
+  const resolved = resolveBitmapBaseSelection(requested);
+  chosen = bases.find((base) => base.key === resolved);
+} catch {
+  chosen = undefined;
+}
 if (!chosen) {
   console.error(`Unknown BitmapPunks base: ${requested}`);
-  console.error(`Try one of: ${bases.slice(0, 12).map((base) => base.key).join(", ")}${bases.length > 12 ? ", ..." : ""}`);
+  console.error("Try `base list` to browse available traits.");
+  console.error(`Quick picks: ${bases.slice(0, 12).map((base) => base.key).join(", ")}${bases.length > 12 ? ", ..." : ""}`);
   process.exit(1);
 }
 

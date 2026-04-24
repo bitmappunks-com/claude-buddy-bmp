@@ -9,6 +9,7 @@ import {
   listBitmapBaseTraits,
   listBitmapItems,
   loadBitmapBaseTrait,
+  resolveBitmapItemSelection,
 } from "./bitmappunk-avatar.ts";
 
 describe("vendored bmp-gif base traits", () => {
@@ -83,20 +84,51 @@ describe("legacy avatar assets", () => {
   });
 });
 
+describe("bitmap item selection", () => {
+  test("keeps an explicitly selected item even when a reaction reason exists", () => {
+    expect(resolveBitmapItemSelection("1749-sleep_bubble", "error", 7)).toBe("1749-sleep_bubble");
+  });
+
+  test("maps error-like reasons to a themed item when auto mode is used", () => {
+    const chosen = resolveBitmapItemSelection("auto", "error", 0);
+    expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosen);
+  });
+
+  test("maps build/release success reasons to an upbeat item when auto mode is used", () => {
+    const chosen = resolveBitmapItemSelection("auto", "all-green", 1);
+    expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(chosen);
+  });
+
+  test("falls back to a deterministic idle pool choice when no reason is provided", () => {
+    expect(resolveBitmapItemSelection(undefined, undefined, 5)).toBe(resolveBitmapItemSelection(undefined, undefined, 5));
+    expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(resolveBitmapItemSelection(undefined, undefined, 5));
+  });
+});
+
 describe("buildBitmapStatusArt", () => {
   test("builds ANSI-rendered status frames from vendored base, action, and item data", () => {
-    const status = buildBitmapStatusArt("100-solana_male");
+    const status = buildBitmapStatusArt("100-solana_male", "auto", "error", 0);
+    const chosenItem = status.bitmapItem!;
     expect(status.bitmapBase).toBe("100-solana_male");
-    expect(status.bitmapItem).toBe("1-420");
+    expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosenItem);
     expect(status.frames).toHaveLength(12);
     expect(status.framesHalfblock).toHaveLength(12);
     expect(status.framesFullcell).toHaveLength(12);
-    expect(status.frameSequence).toEqual([0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 4, 5, 6, 7, 8, 9, 10, 11, 0, 2, 0, 0, 0]);
+    expect(status.frameSequence).toEqual([0, 3, 0, 1, 0, 4, 5, 6, 7, 8, 3, 0, 2, 0, 0]);
     expect(status.frames[0]).toMatch(/\x1b\[(?:38|48);2;/);
     expect(status.frames[1]).not.toBe(status.frames[0]);
     expect(status.frames[3]).not.toBe(status.frames[0]);
     expect(status.frames[4]).not.toBe(status.frames[0]);
-    expect(status.frames[11]).not.toBe(status.frames[4]);
+    expect(new Set(status.frames.slice(4)).size).toBeGreaterThan(1);
+  });
+
+  test("varies the auto item burst cadence with the seed instead of replaying a simple sequential slice", () => {
+    const first = buildBitmapStatusArt("100-solana_male", "1-420", undefined, 0);
+    const second = buildBitmapStatusArt("100-solana_male", "1-420", undefined, 1);
+
+    expect(first.frameSequence).toEqual([0, 0, 0, 1, 0, 0, 4, 5, 6, 0, 3, 0, 2, 0, 0]);
+    expect(second.frameSequence).toEqual([0, 0, 0, 1, 0, 0, 5, 10, 7, 0, 3, 0, 2, 0, 0]);
+    expect(first.frameSequence).not.toEqual(second.frameSequence);
   });
 
   test("preview script renders vendored ANSI art instead of referencing hello.gif assets", () => {

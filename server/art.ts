@@ -7,15 +7,36 @@
  */
 
 import { type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
-import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, DEFAULT_BITMAP_ITEM } from "./bitmappunk-avatar.ts";
-import { loadConfig } from "./state.ts";
+import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, DEFAULT_BITMAP_ITEM, resolveBitmapBaseSelection, resolveBitmapItemSelection } from "./bitmappunk-avatar.ts";
+import { loadConfig, loadReaction } from "./state.ts";
 
 function currentBitmapBase(): string {
-  return loadConfig().activeBitmapBase ?? DEFAULT_BITMAP_BASE;
+  try {
+    return resolveBitmapBaseSelection(loadConfig().activeBitmapBase);
+  } catch {
+    return DEFAULT_BITMAP_BASE;
+  }
 }
 
 function currentBitmapItem(): string {
-  return loadConfig().activeBitmapItem ?? DEFAULT_BITMAP_ITEM;
+  const configured = loadConfig().activeBitmapItem;
+  if (!configured || configured === "auto") return DEFAULT_BITMAP_ITEM;
+  try {
+    return resolveBitmapItemSelection(configured);
+  } catch {
+    return DEFAULT_BITMAP_ITEM;
+  }
+}
+
+function currentBitmapReactionContext(): { reason?: string; seed: number } {
+  const reaction = loadReaction();
+  if (!reaction) {
+    return { seed: Math.floor(Date.now() / 300000) };
+  }
+  return {
+    reason: reaction.reason,
+    seed: Math.floor(reaction.timestamp / 30000),
+  };
 }
 
 // ─── Hat art ────────────────────────────────────────────────────────────────
@@ -129,13 +150,10 @@ function dpad(s: string, targetW: number): string {
 // ─── Render functions ───────────────────────────────────────────────────────
 
 export function getArtFrame(_species: Species, _eye: Eye, frame: number = 0): string[] {
-  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem());
+  const ctx = currentBitmapReactionContext();
+  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem(), ctx.reason, ctx.seed);
   return art.frames[frame % art.frames.length].split("\n");
 }
-
-export const STATUS_FRAME_SEQUENCE: readonly number[] = [
-  0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 4, 5, 6, 7, 8, 9, 10, 11, 0, 2, 0, 0, 0,
-];
 
 export function getStatusFrames(_bones: BuddyBones): {
   bitmapBase: string;
@@ -145,7 +163,8 @@ export function getStatusFrames(_bones: BuddyBones): {
   framesFullcell: string[];
   frameSequence: number[];
 } {
-  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem());
+  const ctx = currentBitmapReactionContext();
+  const art = buildBitmapStatusArt(currentBitmapBase(), currentBitmapItem(), ctx.reason, ctx.seed);
   return {
     bitmapBase: art.bitmapBase,
     bitmapItem: art.bitmapItem,

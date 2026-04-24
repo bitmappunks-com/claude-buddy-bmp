@@ -2,6 +2,7 @@
 
 import {
   loadCompanion,
+  loadConfig,
   resolveUserId,
   saveCompanion,
   saveConfig,
@@ -12,10 +13,7 @@ import {
   generatePersonality,
   type Companion,
 } from "../server/engine.ts";
-import {
-  DEFAULT_BITMAP_ITEM,
-  listBitmapItems,
-} from "../server/bitmappunk-avatar.ts";
+import { DEFAULT_BITMAP_ITEM } from "../server/bitmappunk-avatar.ts";
 
 function normalizedArgs(): string[] {
   const args = process.argv.slice(2);
@@ -40,24 +38,24 @@ function ensureCompanion(): Companion {
 }
 
 const args = normalizedArgs();
-const items = listBitmapItems();
-const current = saveConfig({}).activeBitmapItem ?? DEFAULT_BITMAP_ITEM;
+const current = loadConfig().activeBitmapItem ?? DEFAULT_BITMAP_ITEM;
 
 if (!args[0]) {
-  console.log(`Active BitmapPunks item: ${current}`);
-  console.log(`Available items: ${items.slice(0, 12).map((item) => item.key).join(", ")}${items.length > 12 ? ", ..." : ""}`);
+  console.log(`Active BitmapPunks item mode: ${current === "auto" ? "auto (behavior/randomized)" : "legacy explicit item (will render, but direct item selection is no longer user-facing)"}`);
+  console.log("ITEM animations are selected automatically from recent buddy behavior.");
+  console.log("Use `item auto` to reset any legacy explicit item override back to automatic selection.");
   process.exit(0);
 }
 
 const requested = args[0];
-const chosen = items.find((item) => item.key === requested || item.name === requested);
-if (!chosen) {
-  console.error(`Unknown BitmapPunks item: ${requested}`);
-  console.error(`Try one of: ${items.slice(0, 12).map((item) => item.key).join(", ")}${items.length > 12 ? ", ..." : ""}`);
-  process.exit(1);
+if (requested === "auto") {
+  saveConfig({ activeBitmapItem: "auto" });
+  const companion = ensureCompanion();
+  writeStatusState(companion);
+  console.log("Active BitmapPunks item mode -> auto (behavior/randomized)");
+  process.exit(0);
 }
 
-saveConfig({ activeBitmapItem: chosen.key });
-const companion = ensureCompanion();
-writeStatusState(companion);
-console.log(`Active BitmapPunks item -> ${chosen.key} (${chosen.displayName})`);
+console.error("BitmapPunks ITEM choice is automatic and is not user-selectable.");
+console.error("Use `item auto` to reset legacy explicit item config, or `base <trait>` to choose a user-facing BASE trait.");
+process.exit(1);
