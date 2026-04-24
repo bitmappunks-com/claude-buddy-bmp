@@ -18,6 +18,7 @@
 import {
   loadActiveSlot, saveActiveSlot, listCompanionSlots,
   loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
+  loadConfig, saveConfig,
 } from "../server/state.ts";
 import {
   generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
@@ -25,6 +26,7 @@ import {
   type BuddyBones, type Companion,
 } from "../server/engine.ts";
 import { renderCompanionCard } from "../server/art.ts";
+import { DEFAULT_BITMAP_BASE, listBitmapBaseTraits, resolveBitmapBaseSelection } from "../server/bitmappunk-avatar.ts";
 import { randomBytes } from "crypto";
 
 // ─── ANSI ─────────────────────────────────────────────────────────────────────
@@ -108,7 +110,7 @@ const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
-type Mode = "saved" | "criteria" | "searching" | "results" | "naming";
+type Mode = "saved" | "base" | "criteria" | "searching" | "results" | "naming";
 interface SlotEntry   { slot: string; companion: Companion; }
 interface BuddyResult { userId: string; bones: BuddyBones; }
 
@@ -117,6 +119,7 @@ interface State {
   searching:     boolean;
   savedSlots:    SlotEntry[];
   savedCursor:   number;
+  baseCursor:    number;
   activeSlot:    string;
   criteriaFocus: number;
   ci:            number[];   // [speciesIdx, rarityIdx, shinyIdx, peakIdx, dumpIdx, eyeIdx, hatIdx, avgIdx, dbgIdx, patIdx, chaIdx, wisIdx, snkIdx]
@@ -128,12 +131,27 @@ interface State {
   message:       string;
 }
 
+const BITMAP_BASES = listBitmapBaseTraits();
+
+function currentBitmapBaseKey(): string {
+  try {
+    return resolveBitmapBaseSelection(loadConfig().activeBitmapBase ?? DEFAULT_BITMAP_BASE);
+  } catch {
+    return DEFAULT_BITMAP_BASE;
+  }
+}
+
+function currentBitmapBaseIndex(): number {
+  return Math.max(0, BITMAP_BASES.findIndex((base) => base.key === currentBitmapBaseKey()));
+}
+
 function fresh(): State {
   return {
     mode:          "saved",
     searching:     false,
     savedSlots:    listCompanionSlots(),
     savedCursor:   0,
+    baseCursor:    currentBitmapBaseIndex(),
     activeSlot:    loadActiveSlot(),
     criteriaFocus: 0,
     // Default criteria: legendary, any species/shiny/peak/dump/eye/hat/avg/stats
@@ -153,7 +171,7 @@ const LEFT_W = 36;
 
 function savedPane(s: State): string[] {
   const lines: string[] = [];
-  lines.push(`${B}  Your Menagerie${N}  ${GR}[s] search${N}`);
+  lines.push(`${B}  Your Menagerie${N}  ${GR}[b] base  [s] search${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
 
   if (s.savedSlots.length === 0) {
@@ -176,6 +194,28 @@ function savedPane(s: State): string[] {
   }
 
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  return lines;
+}
+
+function basePane(s: State): string[] {
+  const lines: string[] = [];
+  const activeBase = currentBitmapBaseKey();
+  lines.push(`${B}  BitmapPunks BASE${N}`);
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  const viewH = 14;
+  const offset = Math.max(0, s.baseCursor - Math.floor(viewH / 2));
+  for (let i = offset; i < Math.min(BITMAP_BASES.length, offset + viewH); i++) {
+    const base = BITMAP_BASES[i];
+    const isActive = base.key === activeBase;
+    const isCursor = i === s.baseCursor;
+    const dot = isActive ? `${GN}●${N}` : " ";
+    const label = `${base.key.slice(0, 24).padEnd(24)} ${base.gender.slice(0, 1)}`;
+    const row = ` ${dot} ${label}`;
+    lines.push(isCursor ? RV + row + N : row);
+  }
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  lines.push(`  ${GR}enter applies visual base only${N}`);
+  lines.push(`  ${GR}name/stats/eye/hat unchanged${N}`);
   return lines;
 }
 
@@ -258,6 +298,8 @@ function previewPane(s: State): string[] {
 
   if (s.mode === "saved") {
     c = s.savedSlots[s.savedCursor]?.companion ?? null;
+  } else if (s.mode === "base") {
+    c = loadCompanionSlot(s.activeSlot) ?? s.savedSlots.find((entry) => entry.slot === s.activeSlot)?.companion ?? null;
   } else if (s.mode === "results") {
     const r = s.results[s.resultCursor];
     if (r) c = {
@@ -288,6 +330,7 @@ function drawScreen(s: State): void {
   const rows = Math.max(20, process.stdout.rows    || 24);
 
   const leftLines  = s.mode === "saved"      ? savedPane(s)
+                   : s.mode === "base"       ? basePane(s)
                    : s.mode === "criteria"   ? criteriaPane(s)
                    : s.mode === "searching"  ? searchingPane(s)
                    : s.mode === "results"    ? resultsPane(s)
@@ -311,7 +354,8 @@ function drawScreen(s: State): void {
 
   // Footer — mode-specific help
   const helpText =
-    s.mode === "saved"     ? "↑↓ navigate  enter summon  r random  s search  q quit" :
+    s.mode === "saved"     ? "↑↓ navigate  enter summon  b base  r random  s search  q quit" :
+    s.mode === "base"      ? "↑↓ navigate BASE  enter apply visual base  esc back  q quit" :
     s.mode === "criteria"  ? "↑↓ field  ←→ value  enter search  esc back" :
     s.mode === "searching" ? "any key to stop and show results so far" :
     s.mode === "results"   ? "↑↓ navigate  enter name+save  esc back  q quit" :
@@ -403,6 +447,16 @@ async function runSearch(s: State): Promise<void> {
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 
+function applySelectedBase(s: State): boolean {
+  const base = BITMAP_BASES[s.baseCursor];
+  if (!base) return false;
+  saveConfig({ activeBitmapBase: base.key });
+  const active = loadCompanionSlot(s.activeSlot) ?? s.savedSlots.find((entry) => entry.slot === s.activeSlot)?.companion;
+  if (active) writeStatusState(active, `*base changed to ${base.displayName}*`);
+  s.message = `✓ BitmapPunks BASE set to ${base.key}; buddy attributes unchanged`;
+  return true;
+}
+
 /** Returns true if the TUI should exit. */
 function onKey(key: string, s: State): boolean {
   if (key === "\x03") return true;  // Ctrl+C always quits
@@ -441,6 +495,7 @@ function onKey(key: string, s: State): boolean {
 
     case "saved": {
       if (key === "q")                          return true;
+      if (key === "b")                          { s.baseCursor = currentBitmapBaseIndex(); s.mode = "base"; break; }
       if (key === "s")                          { s.mode = "criteria"; break; }
       if (key === "\x1b[A" || key === "k")      s.savedCursor = clamp(s.savedCursor - 1, 0, s.savedSlots.length - 1);
       else if (key === "\x1b[B" || key === "j") s.savedCursor = clamp(s.savedCursor + 1, 0, s.savedSlots.length - 1);
@@ -462,6 +517,17 @@ function onKey(key: string, s: State): boolean {
           s.message = `✓ ${entry.companion.name} summoned!`;
           return true;
         }
+      }
+      break;
+    }
+
+    case "base": {
+      if (key === "q")                          return true;
+      if (key === "\x1b")                       { s.mode = "saved"; break; }
+      if (key === "\x1b[A" || key === "k")      s.baseCursor = clamp(s.baseCursor - 1, 0, BITMAP_BASES.length - 1);
+      else if (key === "\x1b[B" || key === "j") s.baseCursor = clamp(s.baseCursor + 1, 0, BITMAP_BASES.length - 1);
+      else if (key === "\r" || key === "\n") {
+        if (applySelectedBase(s)) return true;
       }
       break;
     }

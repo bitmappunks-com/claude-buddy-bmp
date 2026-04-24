@@ -83,11 +83,10 @@ Setup:
 
 Buddy:
   show              Display your current buddy
-  pick              Interactive two-pane buddy picker (browse saved + search)
+  pick              Interactive picker (saved/search + BitmapPunks BASE via [b])
   hunt              Search for a specific buddy (non-interactive)
   verify            Verify what buddy your current ID produces
-  base <trait>        Choose the active BitmapPunks BASE trait for rendering
-  base pick [query]   Interactive BASE picker; keeps buddy stats/name/etc unchanged
+  base <trait>        Set BitmapPunks BASE directly (keeps buddy stats/name/etc unchanged)
   base list [query]   Browse or filter BitmapPunks BASE traits
   base default        Reset BitmapPunks BASE to the default trait
 
