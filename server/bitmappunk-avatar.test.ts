@@ -180,6 +180,23 @@ describe("bitmap item selection", () => {
       expect(status.frameSequence.every((idx) => idx >= 0 && idx < status.frames.length)).toBe(true);
     }
   });
+
+  test("gives git and temporal triggers distinct automatic cadences instead of generic idle looping", () => {
+    const idleStatus = buildBitmapStatusArt("100-solana_male", "auto", "idle", 0);
+    const commitStatus = buildBitmapStatusArt("100-solana_male", "auto", "commit", 0);
+    const pushStatus = buildBitmapStatusArt("100-solana_male", "auto", "push", 0);
+    const lateNightStatus = buildBitmapStatusArt("100-solana_male", "auto", "late-night", 0);
+
+    for (const status of [commitStatus, pushStatus, lateNightStatus]) {
+      expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(status.bitmapItem!);
+      expect(status.frameSequence.every((idx) => idx >= 0 && idx < status.frames.length)).toBe(true);
+      expect(status.frameSequence.filter((idx) => idx >= 4).length).toBeGreaterThanOrEqual(3);
+      expect(status.frameSequence.slice(0, 6).some((idx) => idx === 1 || idx === 2 || idx === 3)).toBe(true);
+    }
+    expect(commitStatus.frameSequence).not.toEqual(idleStatus.frameSequence);
+    expect(pushStatus.frameSequence).not.toEqual(commitStatus.frameSequence);
+    expect(lateNightStatus.frameSequence).not.toEqual(commitStatus.frameSequence);
+  });
 });
 
 describe("buildBitmapStatusArt", () => {

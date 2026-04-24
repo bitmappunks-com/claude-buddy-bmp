@@ -201,10 +201,11 @@ const CHURN_REASONS = [
   "large-diff", "many-edits", "delete-file", "large-file", "create-file", "debug-loop", "write-spree", "search-heavy",
   "snark", "debugging", "wisdom", "patience",
 ] as const satisfies readonly ReactionReason[];
-const IDLE_REASONS = [
-  "hatch", "pet", "turn", "idle", "push", "commit", "branch", "rebase", "stash", "tag",
-  "late-night", "early-morning", "long-session", "marathon", "weekend", "monday", "friday", "late-night-commit", "friday-push",
-  "sarcastic", "new-year", "valentines", "pi-day", "april-fools", "halloween", "christmas", "new-years-eve", "spooky-season",
+const IDLE_REASONS = ["hatch", "pet", "turn", "idle", "sarcastic"] as const satisfies readonly ReactionReason[];
+const GIT_REASONS = ["push", "commit", "branch", "rebase", "stash", "tag", "late-night-commit", "friday-push"] as const satisfies readonly ReactionReason[];
+const TEMPORAL_REASONS = [
+  "late-night", "early-morning", "long-session", "marathon", "weekend", "monday", "friday",
+  "new-year", "valentines", "pi-day", "april-fools", "halloween", "christmas", "new-years-eve", "spooky-season",
 ] as const satisfies readonly ReactionReason[];
 const CHAOS_REASONS = ["chaos"] as const satisfies readonly ReactionReason[];
 const FIRE_REASONS = [
@@ -305,6 +306,22 @@ function resolveBitmapAnimationProfile(reason?: string, seed: number = 0): Bitma
     ]);
   }
 
+  if (reasonIn(normalized, GIT_REASONS)) {
+    return pickProfile(animationSeed, [
+      { intro: [0, 1, 0, 0, 3], outro: [0, 1, 0, 2, 0], itemBurst: 3 },
+      { intro: [0, 0, 1, 0, 3, 0], outro: [0, 2, 0, 1, 0], itemBurst: 4 },
+      { intro: [0, 3, 0, 1, 0], outro: [0, 0, 2, 0, 0], itemBurst: 3 },
+    ]);
+  }
+
+  if (reasonIn(normalized, TEMPORAL_REASONS)) {
+    return pickProfile(animationSeed, [
+      { intro: [0, 0, 2, 0, 0, 1], outro: [0, 2, 0, 0, 0], itemBurst: 3 },
+      { intro: [0, 3, 0, 0, 2, 0], outro: [0, 3, 0, 2, 0, 0], itemBurst: 4 },
+      { intro: [0, 0, 1, 0, 0, 2], outro: [0, 0, 2, 0, 1, 0], itemBurst: 3 },
+    ]);
+  }
+
   return pickProfile(animationSeed, [
     { intro: [0, 0, 0, 1, 0, 0], outro: [0, 3, 0, 2, 0, 0], itemBurst: reasonIn(normalized, IDLE_REASONS) ? 4 : 3 },
     { intro: [0, 0, 1, 0, 0, 3], outro: [0, 2, 0, 0, 0], itemBurst: 3 },
@@ -370,7 +387,12 @@ export function resolveBitmapItemSelection(
   if (reasonIn(normalized, SUCCESS_REASONS)) {
     return pickFromPool(SUCCESS_ITEM_POOL, selectionSeed);
   }
-  if (reasonIn(normalized, IDLE_REASONS) || reasonIn(normalized, CHURN_REASONS)) {
+  if (
+    reasonIn(normalized, IDLE_REASONS) ||
+    reasonIn(normalized, GIT_REASONS) ||
+    reasonIn(normalized, TEMPORAL_REASONS) ||
+    reasonIn(normalized, CHURN_REASONS)
+  ) {
     return pickFromPool(IDLE_ITEM_POOL, selectionSeed);
   }
   if (reasonIn(normalized, CHAOS_REASONS)) {
