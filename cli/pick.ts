@@ -17,8 +17,7 @@
 
 import {
   loadActiveSlot, saveActiveSlot, listCompanionSlots,
-  loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
-  loadConfig, saveConfig,
+  loadCompanionSlot, saveCompanion, saveCompanionSlot, slugify, unusedName, writeStatusState,
 } from "../server/state.ts";
 import {
   generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
@@ -26,7 +25,7 @@ import {
   type BuddyBones, type Companion,
 } from "../server/engine.ts";
 import { renderCompanionCard } from "../server/art.ts";
-import { DEFAULT_BITMAP_BASE, listBitmapBaseTraits, resolveBitmapBaseSelection } from "../server/bitmappunk-avatar.ts";
+import { DEFAULT_BITMAP_BASE, listBitmapBaseTraits, pickBitmapBaseForSeed, resolveBitmapBaseSelection } from "../server/bitmappunk-avatar.ts";
 import { randomBytes } from "crypto";
 
 // ─── ANSI ─────────────────────────────────────────────────────────────────────
@@ -135,7 +134,8 @@ const BITMAP_BASES = listBitmapBaseTraits();
 
 function currentBitmapBaseKey(): string {
   try {
-    return resolveBitmapBaseSelection(loadConfig().activeBitmapBase ?? DEFAULT_BITMAP_BASE);
+    const companion = loadCompanionSlot(loadActiveSlot());
+    return resolveBitmapBaseSelection(companion?.bitmapBase ?? DEFAULT_BITMAP_BASE);
   } catch {
     return DEFAULT_BITMAP_BASE;
   }
@@ -450,10 +450,15 @@ function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min
 function applySelectedBase(s: State): boolean {
   const base = BITMAP_BASES[s.baseCursor];
   if (!base) return false;
-  saveConfig({ activeBitmapBase: base.key });
   const active = loadCompanionSlot(s.activeSlot) ?? s.savedSlots.find((entry) => entry.slot === s.activeSlot)?.companion;
-  if (active) writeStatusState(active, `*base changed to ${base.displayName}*`);
-  s.message = `✓ BitmapPunks BASE set to ${base.key}; buddy attributes unchanged`;
+  if (!active) return false;
+  active.bitmapBase = base.key;
+  saveActiveSlot(s.activeSlot);
+  // saveCompanion updates the active slot, so make the selected saved slot active first.
+  saveCompanion(active);
+  writeStatusState(active, `*base changed to ${base.displayName}*`);
+  s.savedSlots = listCompanionSlots();
+  s.message = `✓ ${active.name}'s BitmapPunks BASE set to ${base.key}; other pets unchanged`;
   return true;
 }
 
@@ -479,6 +484,7 @@ function onKey(key: string, s: State): boolean {
           bones: r.bones, name,
           personality: generatePersonality(r.bones, r.userId),
           hatchedAt: Date.now(), userId: r.userId,
+          bitmapBase: pickBitmapBaseForSeed(`pick:${r.userId}:${name}`),
         };
         saveCompanionSlot(companion, slot);
         saveActiveSlot(slot);

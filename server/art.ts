@@ -8,11 +8,11 @@
 
 import { type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
 import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
-import { loadConfig, loadReaction } from "./state.ts";
+import { loadReaction } from "./state.ts";
 
-function currentBitmapBase(): string {
+function currentBitmapBase(requestedBase?: string): string {
   try {
-    return resolveBitmapBaseSelection(loadConfig().activeBitmapBase);
+    return resolveBitmapBaseSelection(requestedBase ?? DEFAULT_BITMAP_BASE);
   } catch {
     return DEFAULT_BITMAP_BASE;
   }
@@ -145,7 +145,7 @@ export function getArtFrame(_species: Species, _eye: Eye, frame: number = 0): st
   return art.frames[frame % art.frames.length].split("\n");
 }
 
-export function getStatusFrames(_bones: BuddyBones): {
+export function getStatusFrames(_bones: BuddyBones, bitmapBase?: string): {
   bitmapBase: string;
   bitmapItem?: string;
   frames: string[];
@@ -154,7 +154,7 @@ export function getStatusFrames(_bones: BuddyBones): {
   frameSequence: number[];
 } {
   const ctx = currentBitmapReactionContext();
-  const art = buildBitmapStatusArt(currentBitmapBase(), ctx.reason, ctx.seed);
+  const art = buildBitmapStatusArt(currentBitmapBase(bitmapBase), ctx.reason, ctx.seed);
   return {
     bitmapBase: art.bitmapBase,
     bitmapItem: art.bitmapItem,
@@ -283,6 +283,7 @@ export function renderCompanionCardMarkdown(
   personality: string,
   reaction?: string,
   frame: number = 0,
+  bitmapBase?: string,
 ): string {
   const dot = RARITY_DOT[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
@@ -309,10 +310,10 @@ export function renderCompanionCardMarkdown(
   parts.push(`### ${dot} ${name} · \`${bones.rarity.toUpperCase()} ${bones.species}\` · ${stars}${shiny}`);
   parts.push("");
 
-  const bitmapBase = currentBitmapBase();
+  const displayedBitmapBase = currentBitmapBase(bitmapBase);
 
   // ANSI bitmap art does not render cleanly in Claude's markdown UI.
-  parts.push(`**Avatar:** BitmapPunks base \`${bitmapBase}\``);
+  parts.push(`**Avatar:** BitmapPunks base \`${displayedBitmapBase}\``);
   parts.push(artLines.length > 0 ? `_terminal preview: ${artLines.length} rows of ANSI bitmap art_` : "");
   parts.push("");
 
@@ -348,8 +349,9 @@ export function renderStatusLine(
   bones: BuddyBones,
   name: string,
   reaction?: string,
+  bitmapBase?: string,
 ): string {
-  const face = `bitmap:${currentBitmapBase()}`;
+  const face = `bitmap:${currentBitmapBase(bitmapBase)}`;
   const color = RARITY_COLOR[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? "\u2728" : "";

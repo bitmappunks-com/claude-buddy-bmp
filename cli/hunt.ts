@@ -1,14 +1,14 @@
 #!/usr/bin/env bun
 /**
- * claude-buddy hunt — guided BitmapPunks BASE selector
+ * claude-buddy hunt — guided BitmapPunks pet creation
  *
  * Flow:
  *   1. Pick gender
  *   2. Pick base type/species
- *   3. If that type has multiple variants, pick the exact BASE
+ *   3. If that type has multiple concrete bases, pick the exact look
  *
- * Selecting a BASE changes only the visual BitmapPunks base. The companion's
- * name, rarity, stats, eye, hat, personality, and menagerie slot stay intact.
+ * Hunt creates a new companion. The chosen BitmapPunks BASE is stored on that
+ * companion, so every saved pet keeps its own visual base and generated setup.
  */
 
 import { createInterface } from "readline";
@@ -18,10 +18,11 @@ import {
   type Companion,
 } from "../server/engine.ts";
 import {
-  loadCompanion,
   resolveUserId,
-  saveCompanion,
-  saveConfig,
+  saveActiveSlot,
+  saveCompanionSlot,
+  slugify,
+  unusedName,
   writeStatusState,
 } from "../server/state.ts";
 import {
@@ -72,23 +73,6 @@ function pickFromList<T>(label: string, items: readonly T[], render: (item: T) =
   });
 }
 
-function ensureCompanion(): Companion {
-  const existing = loadCompanion();
-  if (existing) return existing;
-
-  const userId = resolveUserId();
-  const bones = generateBones(userId);
-  const companion: Companion = {
-    bones,
-    name: "buddy",
-    personality: generatePersonality(bones, userId),
-    hatchedAt: Date.now(),
-    userId,
-  };
-  saveCompanion(companion);
-  return companion;
-}
-
 function uniqueBy<T>(items: readonly T[], keyOf: (item: T) => string): T[] {
   const seen = new Set<string>();
   const out: T[] = [];
@@ -101,10 +85,44 @@ function uniqueBy<T>(items: readonly T[], keyOf: (item: T) => string): T[] {
   return out;
 }
 
+function baseVariantParts(base: BitmapBaseInfo): string[] {
+  const familyTokens = new Set(
+    base.displayName.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean),
+  );
+  return base.name
+    .split("_")
+    .filter((part) => part !== base.gender && !familyTokens.has(part.toLowerCase()))
+    .map((part) => part.toLowerCase());
+}
+
+function describeBase(base: BitmapBaseInfo): string {
+  const parts = [base.displayName, ...baseVariantParts(base), base.gender];
+  return `(${parts.join(", ")})`;
+}
+
+function createCompanionForBase(base: BitmapBaseInfo): { companion: Companion; slot: string } {
+  const userId = resolveUserId();
+  const now = Date.now();
+  const bones = generateBones(userId, `hunt:${base.key}:${now}`);
+  const name = unusedName();
+  const companion: Companion = {
+    bones,
+    name,
+    personality: generatePersonality(bones, userId),
+    hatchedAt: now,
+    userId,
+    bitmapBase: base.key,
+  };
+  const slot = slugify(name);
+  saveCompanionSlot(companion, slot);
+  saveActiveSlot(slot);
+  return { companion, slot };
+}
+
 async function main() {
   console.log(`
 ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}
-${CYAN}║${NC}  ${BOLD}claude-buddy hunt${NC} — choose a BitmapPunks BASE             ${CYAN}║${NC}
+${CYAN}║${NC}  ${BOLD}claude-buddy hunt${NC} — create a BitmapPunks pet            ${CYAN}║${NC}
 ${CYAN}╚══════════════════════════════════════════════════════════╝${NC}
 `);
 
@@ -117,23 +135,22 @@ ${CYAN}╚═══════════════════════�
   const typeChoices = uniqueBy(basesForGender, (base) => base.displayName);
   const typeChoice = await pickFromList<BitmapBaseInfo>("Type:", typeChoices, (base) => {
     const count = basesForGender.filter((candidate) => candidate.displayName === base.displayName).length;
-    return `${base.displayName}${count > 1 ? ` ${DIM}(${count} variants)${NC}` : ""}`;
+    return `${base.displayName}${count > 1 ? ` ${DIM}(${count} options)${NC}` : ""}`;
   });
   console.log(`${GREEN}✓${NC} ${typeChoice.displayName}`);
 
   const variants = basesForGender.filter((base) => base.displayName === typeChoice.displayName);
   const chosen = variants.length === 1
     ? variants[0]!
-    : await pickFromList<BitmapBaseInfo>("Variant:", variants, (base) => `${base.key} ${DIM}(${base.name})${NC}`);
+    : await pickFromList<BitmapBaseInfo>("Exact look:", variants, describeBase);
 
-  saveConfig({ activeBitmapBase: chosen.key });
-  const companion = ensureCompanion();
-  writeStatusState(companion, `*base changed to ${chosen.displayName}*`);
+  const { companion, slot } = createCompanionForBase(chosen);
+  writeStatusState(companion, `*${companion.name} arrives as ${describeBase(chosen)}*`);
 
-  console.log(`\n${GREEN}✓${NC}  Active BitmapPunks BASE -> ${chosen.key} (${chosen.displayName}, ${chosen.gender})`);
-  console.log(`${DIM}  Companion name, rarity, stats, eye, hat, personality, and menagerie slot are unchanged.${NC}`);
+  console.log(`\n${GREEN}✓${NC}  Created ${BOLD}${companion.name}${NC} ${describeBase(chosen)}`);
+  console.log(`${DIM}  Saved to slot "${slot}" and set as active. This pet keeps its own BASE and generated setup.${NC}`);
   console.log(`\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
-  console.log(`${GREEN}  Done! Restart Claude Code to see the selected BASE.${NC}`);
+  console.log(`${GREEN}  Done! Restart Claude Code to see the selected pet.${NC}`);
   console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n`);
 
   rl.close();

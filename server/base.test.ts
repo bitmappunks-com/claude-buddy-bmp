@@ -2,13 +2,12 @@ import { describe, test, expect } from "bun:test";
 import { mkdtempSync, readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { DEFAULT_BITMAP_BASE } from "./bitmappunk-avatar.ts";
 
-describe("cli base command", () => {
-  test("persists the active bitmap base and refreshes profile-aware status.json", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-command-"));
+describe("BitmapPunks base UX", () => {
+  test("removes the direct base command interface", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-command-removed-"));
     mkdirSync(profileDir, { recursive: true });
-    writeFileSync(join(profileDir, "claude.json"), JSON.stringify({ userID: "base-test-user" }));
+    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-removed-user" }));
 
     const proc = Bun.spawnSync({
       cmd: [process.execPath, "run", "cli/index.ts", "base", "100-solana_male"],
@@ -21,187 +20,13 @@ describe("cli base command", () => {
       stdout: "pipe",
     });
 
-    expect(proc.exitCode).toBe(0);
-    const output = Buffer.from(proc.stdout).toString("utf8");
-    expect(output).toContain("100-solana_male");
-
-    const stateDir = join(profileDir, "buddy-state");
-    const configPath = join(stateDir, "config.json");
-    const statusPath = join(stateDir, "status.json");
-    expect(existsSync(configPath)).toBe(true);
-    expect(existsSync(statusPath)).toBe(true);
-
-    const config = JSON.parse(readFileSync(configPath, "utf8"));
-    expect(config.activeBitmapBase).toBe("100-solana_male");
-
-    const status = JSON.parse(readFileSync(statusPath, "utf8"));
-    expect(status.bitmapBase).toBe("100-solana_male");
-    expect(status.bitmapItem).toBe("auto");
-    expect(status.frames.length).toBeGreaterThan(0);
-    expect(status.frameSequence.length).toBeGreaterThan(3);
+    expect(proc.exitCode).toBe(1);
+    expect(Buffer.from(proc.stderr).toString("utf8")).toContain("Unknown command: base");
+    expect(Buffer.from(proc.stdout).toString("utf8")).not.toContain("base <trait>");
+    expect(existsSync(join(profileDir, "buddy-state", "status.json"))).toBe(false);
   });
 
-  test("accepts a base display name and persists its canonical trait key", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-display-name-"));
-    mkdirSync(profileDir, { recursive: true });
-    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-display-user" }));
-
-    const proc = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "base", "Solana"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(proc.exitCode).toBe(0);
-    expect(Buffer.from(proc.stdout).toString("utf8")).toContain("(Solana)");
-
-    const config = JSON.parse(readFileSync(join(profileDir, "buddy-state", "config.json"), "utf8"));
-    expect(config.activeBitmapBase).toMatch(/solana_(male|female)$/);
-  });
-
-  test("accepts multi-word base trait names from CLI args and persists the canonical key", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-multi-word-"));
-    mkdirSync(profileDir, { recursive: true });
-    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-multi-word-user" }));
-
-    const proc = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "base", "demon", "purple", "female"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(proc.exitCode).toBe(0);
-    expect(Buffer.from(proc.stdout).toString("utf8")).toContain("39-demon_purple_female");
-
-    const config = JSON.parse(readFileSync(join(profileDir, "buddy-state", "config.json"), "utf8"));
-    expect(config.activeBitmapBase).toBe("39-demon_purple_female");
-
-    const status = JSON.parse(readFileSync(join(profileDir, "buddy-state", "status.json"), "utf8"));
-    expect(status.bitmapBase).toBe("39-demon_purple_female");
-  });
-
-  test("filters the base list by user search text without changing config", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-list-filter-"));
-    mkdirSync(profileDir, { recursive: true });
-    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-list-filter-user" }));
-
-    const proc = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "base", "list", "purple", "female"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(proc.exitCode).toBe(0);
-    const output = Buffer.from(proc.stdout).toString("utf8");
-    expect(output).toContain('Available BitmapPunks bases matching "purple female"');
-    expect(output).toContain("39-demon_purple_female");
-    expect(output).toContain("female)");
-    expect(output).not.toContain("100-solana_male");
-  });
-
-  test("supports resetting the active bitmap base back to the default trait", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-default-"));
-    mkdirSync(profileDir, { recursive: true });
-    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-default-user" }));
-
-    const first = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "base", "101-spirit_male"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-    expect(first.exitCode).toBe(0);
-
-    const reset = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "base", "default"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(reset.exitCode).toBe(0);
-    expect(Buffer.from(reset.stdout).toString("utf8")).toContain(DEFAULT_BITMAP_BASE);
-
-    const status = JSON.parse(readFileSync(join(profileDir, "buddy-state", "status.json"), "utf8"));
-    expect(status.bitmapBase).toBe(DEFAULT_BITMAP_BASE);
-  });
-
-  test("selecting a bitmap base preserves the active companion's non-visual attributes", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-preserve-companion-"));
-    const stateDir = join(profileDir, "buddy-state");
-    mkdirSync(stateDir, { recursive: true });
-    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-preserve-user" }));
-
-    const companion = {
-      bones: {
-        rarity: "legendary",
-        species: "dragon",
-        eye: "◉",
-        hat: "crown",
-        shiny: true,
-        stats: { DEBUGGING: 99, PATIENCE: 88, CHAOS: 77, WISDOM: 66, SNARK: 55 },
-        peak: "DEBUGGING",
-        dump: "SNARK",
-      },
-      name: "KeptBuddy",
-      personality: "Do not mutate me.",
-      hatchedAt: 123456789,
-      userId: "preserve-user-id",
-    };
-    const beforeManifest = { active: "kept", companions: { kept: companion } };
-    writeFileSync(join(stateDir, "menagerie.json"), JSON.stringify(beforeManifest, null, 2));
-
-    const proc = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "base", "101-spirit_male"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(proc.exitCode).toBe(0);
-    const afterManifest = JSON.parse(readFileSync(join(stateDir, "menagerie.json"), "utf8"));
-    expect(afterManifest).toEqual(beforeManifest);
-
-    const config = JSON.parse(readFileSync(join(stateDir, "config.json"), "utf8"));
-    expect(config.activeBitmapBase).toBe("101-spirit_male");
-
-    const status = JSON.parse(readFileSync(join(stateDir, "status.json"), "utf8"));
-    expect(status.bitmapBase).toBe("101-spirit_male");
-    expect(status.name).toBe("KeptBuddy");
-    expect(status.rarity).toBe("legendary");
-    expect(status.species).toBe("dragon");
-    expect(status.shiny).toBe(true);
-    expect(status.hat).toBe("crown");
-  });
-
-  test("hunt selects a bitmap base through gender then type without changing the companion", () => {
+  test("hunt creates a new pet with its own bitmap base and generated setup", () => {
     const profileDir = mkdtempSync(join(tmpdir(), "buddy-hunt-base-flow-"));
     const stateDir = join(profileDir, "buddy-state");
     mkdirSync(stateDir, { recursive: true });
@@ -219,12 +44,11 @@ describe("cli base command", () => {
         dump: "SNARK",
       },
       name: "HuntPreserved",
-      personality: "Only the bitmap base should change.",
+      personality: "Only a new pet should be added.",
       hatchedAt: 987654321,
       userId: "hunt-preserve-user-id",
     };
-    const beforeManifest = { active: "hunt", companions: { hunt: companion } };
-    writeFileSync(join(stateDir, "menagerie.json"), JSON.stringify(beforeManifest, null, 2));
+    writeFileSync(join(stateDir, "menagerie.json"), JSON.stringify({ active: "hunt", companions: { hunt: companion } }, null, 2));
 
     const proc = Bun.spawnSync({
       cmd: ["bash", "-lc", `printf '1\\n11\\n' | "${process.execPath}" run cli/index.ts hunt`],
@@ -241,23 +65,30 @@ describe("cli base command", () => {
     const output = Buffer.from(proc.stdout).toString("utf8");
     expect(output).toContain("Gender:");
     expect(output).toContain("Type:");
-    expect(output).toContain("Active BitmapPunks BASE -> 86-solana_female");
+    expect(output).toContain("Created");
+    expect(output).toContain("(Solana, female)");
+    expect(output).not.toContain("86-solana_female");
 
     const afterManifest = JSON.parse(readFileSync(join(stateDir, "menagerie.json"), "utf8"));
-    expect(afterManifest).toEqual(beforeManifest);
+    expect({ ...afterManifest.companions.hunt, bitmapBase: undefined }).toEqual({ ...companion, bitmapBase: undefined });
+    expect(afterManifest.active).not.toBe("hunt");
+    const hunted = afterManifest.companions[afterManifest.active];
+    expect(hunted).toBeTruthy();
+    expect(hunted.bitmapBase).toBe("86-solana_female");
+    expect(hunted.personality).toEqual(expect.any(String));
+    expect(hunted.name).toEqual(expect.any(String));
 
-    const config = JSON.parse(readFileSync(join(stateDir, "config.json"), "utf8"));
-    expect(config.activeBitmapBase).toBe("86-solana_female");
+    expect(existsSync(join(stateDir, "config.json"))).toBe(false);
 
     const status = JSON.parse(readFileSync(join(stateDir, "status.json"), "utf8"));
     expect(status.bitmapBase).toBe("86-solana_female");
-    expect(status.name).toBe("HuntPreserved");
-    expect(status.rarity).toBe("epic");
-    expect(status.species).toBe("fox");
-    expect(status.hat).toBe("beanie");
+    expect(status.name).toBe(hunted.name);
+    expect(status.rarity).toBe(hunted.bones.rarity);
+    expect(status.species).toBe(hunted.bones.species);
+    expect(status.hat).toBe(hunted.bones.hat);
   });
 
-  test("hunt prompts for a variant when a gender/type pair maps to multiple bases", () => {
+  test("hunt prompts for an exact look when a gender/type pair maps to multiple bases", () => {
     const profileDir = mkdtempSync(join(tmpdir(), "buddy-hunt-base-variant-"));
     mkdirSync(profileDir, { recursive: true });
     writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "hunt-base-variant-user" }));
@@ -276,14 +107,19 @@ describe("cli base command", () => {
     expect(proc.exitCode).toBe(0);
     const output = Buffer.from(proc.stdout).toString("utf8");
     expect(output).toContain("Human");
-    expect(output).toContain("Variant:");
-    expect(output).toContain("Active BitmapPunks BASE -> 52-beige_female");
+    expect(output).toContain("Exact look:");
+    expect(output).toContain("(Human, beige, female)");
+    expect(output).toContain("Created");
+    expect(output).not.toContain("52-beige_female");
+    expect(output).not.toContain("Variant:");
 
-    const config = JSON.parse(readFileSync(join(profileDir, "buddy-state", "config.json"), "utf8"));
-    expect(config.activeBitmapBase).toBe("52-beige_female");
+    const manifest = JSON.parse(readFileSync(join(profileDir, "buddy-state", "menagerie.json"), "utf8"));
+    const active = manifest.companions[manifest.active];
+    expect(active.bitmapBase).toBe("52-beige_female");
+    expect(existsSync(join(profileDir, "buddy-state", "config.json"))).toBe(false);
   });
 
-  test("main commands advertise integrated base selection instead of legacy hunt or a separate base picker", () => {
+  test("main commands advertise pick/hunt base flows but not the direct base command", () => {
     const proc = Bun.spawnSync({
       cmd: [process.execPath, "run", "cli/index.ts", "help"],
       cwd: join(import.meta.dir, ".."),
@@ -294,20 +130,22 @@ describe("cli base command", () => {
     expect(proc.exitCode).toBe(0);
     const output = Buffer.from(proc.stdout).toString("utf8");
     expect(output).toContain("pick              Interactive picker (saved/search + BitmapPunks BASE via [b])");
-    expect(output).toContain("hunt              Guided BitmapPunks BASE selector (gender → type → variant)");
-    expect(output).toContain("install           Set up MCP server, skill, hooks, and status line");
-    expect(output).toContain("enable            Same as install (re-enable after disable)");
-    expect(output).not.toContain("Search for a specific buddy");
+    expect(output).toContain("hunt              Create a BitmapPunks pet (gender → type → look)");
+    expect(output).not.toContain("base <trait>");
+    expect(output).not.toContain("base list");
+    expect(output).not.toContain("base default");
     expect(output).not.toContain("base pick");
     expect(output).not.toContain("install-buddy");
-    expect(output.match(/^  upgrade\s+/gm)?.length ?? 0).toBe(1);
   });
 
-  test("secondary help and TUI copy do not expose legacy buddy hunting", () => {
+  test("secondary help and TUI copy do not expose direct base or legacy buddy hunting", () => {
     const serverIndex = readFileSync(join(import.meta.dir, "index.ts"), "utf8");
-    expect(serverIndex).toContain("bun run hunt            Guided BitmapPunks BASE selector");
+    expect(serverIndex).toContain("bun run hunt            Create a BitmapPunks pet (gender → type → look)");
     expect(serverIndex).toContain("bun run pick            Interactive picker (saved/search + BitmapPunks BASE via [b])");
     expect(serverIndex).not.toContain("bun run hunt            Search for specific buddy");
+    expect(serverIndex).not.toContain("base <trait>");
+    expect(serverIndex).not.toContain("base list");
+    expect(serverIndex).not.toContain("base default");
 
     const tui = readFileSync(join(import.meta.dir, "..", "cli", "tui.tsx"), "utf8");
     expect(tui).not.toContain("key: \"hunt\", icon");
@@ -315,28 +153,5 @@ describe("cli base command", () => {
     expect(tui).not.toContain("Choose species, rarity, shiny flag, peak");
     expect(tui).not.toContain("View all 16 milestone badges");
     expect(tui).toContain("View all achievement badges you can");
-  });
-
-  test("falls back to the default marker when persisted base config is invalid", () => {
-    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-invalid-current-"));
-    const stateDir = join(profileDir, "buddy-state");
-    mkdirSync(stateDir, { recursive: true });
-    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-invalid-current-user" }));
-    writeFileSync(join(stateDir, "config.json"), JSON.stringify({ activeBitmapBase: "not-a-real-base" }));
-
-    const proc = Bun.spawnSync({
-      cmd: [process.execPath, "run", "cli/index.ts", "base", "list"],
-      cwd: join(import.meta.dir, ".."),
-      env: {
-        ...process.env,
-        CLAUDE_CONFIG_DIR: profileDir,
-      },
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-
-    expect(proc.exitCode).toBe(0);
-    const output = Buffer.from(proc.stdout).toString("utf8");
-    expect(output).toContain(`*  ${DEFAULT_BITMAP_BASE.split("-")[0]}  ${DEFAULT_BITMAP_BASE}`);
   });
 });

@@ -28,17 +28,19 @@ describe("legacy bitmap item configuration", () => {
     expect(existsSync(join(profileDir, "buddy-state", "config.json"))).toBe(false);
   });
 
-  test("saveConfig drops stale activeBitmapItem from old config files", () => {
+  test("saveConfig drops stale global bitmap config from old config files", () => {
     mkdirSync(STATE_DIR, { recursive: true });
     const configPath = join(STATE_DIR, "config.json");
-    writeFileSync(configPath, JSON.stringify({ activeBitmapItem: "1-420", bubbleWidth: 32 }, null, 2));
+    writeFileSync(configPath, JSON.stringify({ activeBitmapItem: "1-420", activeBitmapBase: "100-solana_male", bubbleWidth: 32 }, null, 2));
 
-    saveConfig({ activeBitmapBase: "100-solana_male" } as Parameters<typeof saveConfig>[0]);
+    saveConfig({ bubbleMargin: 10 });
     const config = JSON.parse(readFileSync(configPath, "utf8"));
 
     expect(loadConfig()).not.toHaveProperty("activeBitmapItem");
+    expect(loadConfig()).not.toHaveProperty("activeBitmapBase");
     expect(config).not.toHaveProperty("activeBitmapItem");
-    expect(config.activeBitmapBase).toBe("100-solana_male");
+    expect(config).not.toHaveProperty("activeBitmapBase");
     expect(config.bubbleWidth).toBe(32);
+    expect(config.bubbleMargin).toBe(10);
   });
 });

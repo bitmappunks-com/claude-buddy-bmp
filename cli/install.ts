@@ -21,6 +21,7 @@ import {
 } from "../server/path.ts";
 import { loadCompanion, saveCompanion, resolveUserId, writeStatusState } from "../server/state.ts";
 import { generateFallbackName } from "../server/reactions.ts";
+import { pickBitmapBaseForSeed } from "../server/bitmappunk-avatar.ts";
 
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";
@@ -263,6 +264,7 @@ function initCompanion() {
     personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
     hatchedAt: Date.now(),
     userId,
+    bitmapBase: pickBitmapBaseForSeed(`install:${userId}`),
   };
 
   saveCompanion(companion);

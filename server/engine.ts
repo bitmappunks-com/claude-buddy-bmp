@@ -130,6 +130,8 @@ export interface Companion {
   personality: string;
   hatchedAt: number;
   userId: string;
+  /** Canonical BitmapPunks BASE key for this companion's visual identity. */
+  bitmapBase?: string;
 }
 
 // ─── Hash: wyhash via Bun.hash, pure JS fallback ───────────────────────────

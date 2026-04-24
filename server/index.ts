@@ -54,6 +54,7 @@ import {
   getReaction, generatePersonalityPrompt,
 } from "./reactions.ts";
 import { renderCompanionCardMarkdown } from "./art.ts";
+import { pickBitmapBaseForSeed } from "./bitmappunk-avatar.ts";
 import {
   incrementEvent, checkAndAward, trackActiveDay,
   renderAchievementsCardMarkdown,
@@ -117,6 +118,7 @@ function ensureCompanion(): Companion {
     personality: generatePersonality(bones, userId),
     hatchedAt: Date.now(),
     userId,
+    bitmapBase: pickBitmapBaseForSeed(`mcp-bootstrap:${userId}:${name}`),
   };
   const slot = slugify(name);
   saveCompanionSlot(companion, slot);
@@ -155,6 +157,8 @@ server.tool(
       companion.name,
       companion.personality,
       reactionText,
+      0,
+      companion.bitmapBase,
     );
 
     writeStatusState(companion, reaction?.reaction);
@@ -211,6 +215,9 @@ server.tool(
       companion.bones,
       companion.name,
       "", // no personality in stats view
+      undefined,
+      0,
+      companion.bitmapBase,
     );
     incrementEvent("commands_run", 1, activeSlot());
     checkAndAward(activeSlot());
@@ -374,7 +381,7 @@ server.tool(
       "  bun run help            Show full CLI help",
       "  bun run show            Display buddy in terminal",
       "  bun run pick            Interactive picker (saved/search + BitmapPunks BASE via [b])",
-      "  bun run hunt            Guided BitmapPunks BASE selector",
+      "  bun run hunt            Create a BitmapPunks pet (gender → type → look)",
       "  bun run doctor          Diagnostic report",
       "  bun run disable         Temporarily deactivate buddy",
       "  bun run enable          Re-enable buddy",
@@ -748,6 +755,8 @@ server.tool(
       companion.name,
       companion.personality,
       `*${companion.name} arrives*`,
+      0,
+      companion.bitmapBase,
     );
     return { content: [{ type: "text", text: `${card}${achNotice}` }] };
   },
@@ -934,6 +943,7 @@ server.tool(
       personality: generatePersonality(bones, userId),
       hatchedAt: Date.now(),
       userId,
+      bitmapBase: pickBitmapBaseForSeed(`mcp-pick:${userId}:${buddyName}`),
     };
 
     saveCompanionSlot(companion, slot);
@@ -945,6 +955,8 @@ server.tool(
       companion.name,
       companion.personality,
       `*${buddyName} hatches*`,
+      0,
+      companion.bitmapBase,
     );
 
     return { content: [{ type: "text", text: card }] };

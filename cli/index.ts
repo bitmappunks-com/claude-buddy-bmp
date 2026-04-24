@@ -7,7 +7,7 @@
  *   npx claude-buddy install      Install MCP + skill + hooks + statusline
  *   npx claude-buddy show         Show current buddy
  *   npx claude-buddy pick         Interactive two-pane buddy picker (saved + search)
- *   npx claude-buddy hunt         Guided BitmapPunks BASE selector
+ *   npx claude-buddy hunt         Create a BitmapPunks pet (gender → type → look)
  *   npx claude-buddy upgrade     Pull latest + reinstall
  *   npx claude-buddy uninstall    Remove all integrations
  *   npx claude-buddy verify       Verify what buddy your ID produces
@@ -56,9 +56,6 @@ switch (command) {
   case "enable":
     await import("./install.ts");
     break;
-  case "base":
-    await import("./base.ts");
-    break;
   case "help":
   case "--help":
   case "-h":
@@ -84,11 +81,8 @@ Setup:
 Buddy:
   show              Display your current buddy
   pick              Interactive picker (saved/search + BitmapPunks BASE via [b])
-  hunt              Guided BitmapPunks BASE selector (gender → type → variant)
+  hunt              Create a BitmapPunks pet (gender → type → look)
   verify            Verify what buddy your current ID produces
-  base <trait>        Set BitmapPunks BASE directly (keeps buddy stats/name/etc unchanged)
-  base list [query]   Browse or filter BitmapPunks BASE traits
-  base default        Reset BitmapPunks BASE to the default trait
 
 Settings:
   settings          Show current settings

@@ -173,6 +173,17 @@ export function listBitmapBaseTraits(): BitmapBaseInfo[] {
 
 export const DEFAULT_BITMAP_BASE = listBitmapBaseTraits()[0]?.key ?? "100-solana_male";
 
+export function pickBitmapBaseForSeed(seed: string): string {
+  const bases = listBitmapBaseTraits();
+  if (bases.length === 0) return DEFAULT_BITMAP_BASE;
+  let hash = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 16777619) >>> 0;
+  }
+  return bases[hash % bases.length]!.key;
+}
+
 const ERROR_ITEM_POOL = ["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"] as const;
 const SUCCESS_ITEM_POOL = ["1744-bubble_gum_large", "1749-sleep_bubble"] as const;
 const FIRE_ITEM_POOL = ["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"] as const;

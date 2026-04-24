@@ -31,6 +31,7 @@ import {
 } from "fs";
 import { join } from "path";
 import type { Companion } from "./engine.ts";
+import { pickBitmapBaseForSeed, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
 import {
   buddyStateDir,
   claudeSettingsPath,
@@ -65,6 +66,24 @@ function emptyManifest(): Manifest {
   return { active: "buddy", companions: {} };
 }
 
+function ensurePetBitmapBases(m: Manifest): boolean {
+  let changed = false;
+  for (const [slot, companion] of Object.entries(m.companions)) {
+    const before = companion.bitmapBase;
+    try {
+      if (companion.bitmapBase) {
+        companion.bitmapBase = resolveBitmapBaseSelection(companion.bitmapBase);
+      } else {
+        companion.bitmapBase = pickBitmapBaseForSeed(`pet:${companion.userId}:${slot}:${companion.name}`);
+      }
+    } catch {
+      companion.bitmapBase = pickBitmapBaseForSeed(`pet:${companion.userId}:${slot}:${companion.name}`);
+    }
+    if (companion.bitmapBase !== before) changed = true;
+  }
+  return changed;
+}
+
 // ─── Atomic manifest I/O ─────────────────────────────────────────────────────
 
 function loadManifest(): Manifest {
@@ -72,6 +91,7 @@ function loadManifest(): Manifest {
     const raw = readFileSync(MANIFEST_FILE, "utf8");
     const m = JSON.parse(raw) as Manifest;
     if (!m.companions) m.companions = {};
+    if (ensurePetBitmapBases(m)) saveManifest(m);
     return m;
   } catch {
     return emptyManifest();
@@ -313,7 +333,6 @@ export interface BuddyConfig {
   bubbleWidth: number;
   bubbleMargin: number;
   useCombinedStatus: boolean;
-  activeBitmapBase?: string;
   rainbowColors?: string[];
 }
 
@@ -331,6 +350,7 @@ const DEFAULT_CONFIG: BuddyConfig = {
 
 function stripLegacyConfig(config: BuddyConfig & Record<string, unknown>): BuddyConfig {
   delete config.activeBitmapItem;
+  delete config.activeBitmapBase;
   return config;
 }
 
@@ -385,7 +405,7 @@ export function writeStatusState(
   const { getStatusFrames } =
     require("./art.ts") as typeof import("./art.ts");
   const { frames, framesHalfblock, framesFullcell, frameSequence, bitmapBase, bitmapItem } =
-    getStatusFrames(companion.bones);
+    getStatusFrames(companion.bones, companion.bitmapBase);
   const state: StatusState = {
     name: companion.name,
     species: companion.bones.species,
