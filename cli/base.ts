@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 
+import { createInterface } from "readline";
 import {
   loadCompanion,
   loadConfig,
@@ -58,15 +59,21 @@ function normalizeSearch(value: string): string {
   return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
-function printBaseList(filter?: string): void {
+function filterBases(filter?: string): typeof bases {
   const trimmedFilter = filter?.trim() ?? "";
   const normalizedFilter = normalizeSearch(trimmedFilter);
-  const visibleBases = normalizedFilter
+  return normalizedFilter
     ? bases.filter((base) => {
         const haystack = [base.key, base.name, base.displayName, base.gender, String(base.id)].map(normalizeSearch).join(" ");
         return haystack.includes(normalizedFilter);
       })
     : bases;
+}
+
+function printBaseList(filter?: string): void {
+  const visibleBases = filterBases(filter);
+  const trimmedFilter = filter?.trim() ?? "";
+  const normalizedFilter = normalizeSearch(trimmedFilter);
 
   console.log(normalizedFilter ? `Available BitmapPunks bases matching "${trimmedFilter}":` : "Available BitmapPunks bases:");
   for (const base of visibleBases) {
@@ -78,9 +85,44 @@ function printBaseList(filter?: string): void {
   }
 }
 
+function applyBase(chosen: (typeof bases)[number]): void {
+  saveConfig({ activeBitmapBase: chosen.key });
+  const companion = ensureCompanion();
+  writeStatusState(companion);
+  console.log(`Active BitmapPunks base -> ${chosen.key} (${chosen.displayName})`);
+  console.log("Companion name, rarity, stats, eye, hat, personality, and menagerie slot are unchanged.");
+}
+
+async function pickBaseInteractively(filter?: string): Promise<void> {
+  const candidates = filterBases(filter);
+  if (candidates.length === 0) {
+    console.error(`No matching bases for: ${filter ?? ""}`);
+    process.exit(1);
+  }
+
+  console.log(filter?.trim() ? `Pick BitmapPunks base matching "${filter.trim()}":` : "Pick BitmapPunks base:");
+  candidates.forEach((base, index) => {
+    const marker = base.key === current ? "*" : " ";
+    console.log(`  ${String(index + 1).padStart(2)}${marker} ${base.key} (${base.displayName}, ${base.gender})`);
+  });
+  console.log("Only the BitmapPunks BASE layer changes; all buddy attributes stay the same.");
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await new Promise<string>((resolve) => rl.question(`Choice [1-${candidates.length}, q to cancel]: `, resolve));
+  rl.close();
+  if (answer.trim().toLowerCase() === "q") process.exit(0);
+  const index = Number.parseInt(answer, 10) - 1;
+  const chosen = candidates[index];
+  if (!chosen) {
+    console.error(`Invalid choice: ${answer}`);
+    process.exit(1);
+  }
+  applyBase(chosen);
+}
+
 if (!args[0]) {
   console.log(`Active BitmapPunks base: ${current}`);
-  console.log("Use `base list` to browse all bases, `base list <search>` to filter, or `base default` to reset to the default trait.");
+  console.log("Use `base pick [search]` for an interactive picker, `base list [search]` to browse/filter, or `base default` to reset.");
   console.log(`Available bases: ${bases.slice(0, 12).map((base) => base.key).join(", ")}${bases.length > 12 ? ", ..." : ""}`);
   process.exit(0);
 }
@@ -88,6 +130,11 @@ if (!args[0]) {
 const command = args[0];
 if (command === "list") {
   printBaseList(args.slice(1).join(" "));
+  process.exit(0);
+}
+
+if (command === "pick") {
+  await pickBaseInteractively(args.slice(1).join(" "));
   process.exit(0);
 }
 
@@ -106,7 +153,4 @@ if (!chosen) {
   process.exit(1);
 }
 
-saveConfig({ activeBitmapBase: chosen.key });
-const companion = ensureCompanion();
-writeStatusState(companion);
-console.log(`Active BitmapPunks base -> ${chosen.key} (${chosen.displayName})`);
+applyBase(chosen);

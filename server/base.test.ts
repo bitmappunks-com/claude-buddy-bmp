@@ -149,6 +149,108 @@ describe("cli base command", () => {
     expect(status.bitmapBase).toBe(DEFAULT_BITMAP_BASE);
   });
 
+  test("selecting a bitmap base preserves the active companion's non-visual attributes", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-preserve-companion-"));
+    const stateDir = join(profileDir, "buddy-state");
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-preserve-user" }));
+
+    const companion = {
+      bones: {
+        rarity: "legendary",
+        species: "dragon",
+        eye: "◉",
+        hat: "crown",
+        shiny: true,
+        stats: { DEBUGGING: 99, PATIENCE: 88, CHAOS: 77, WISDOM: 66, SNARK: 55 },
+        peak: "DEBUGGING",
+        dump: "SNARK",
+      },
+      name: "KeptBuddy",
+      personality: "Do not mutate me.",
+      hatchedAt: 123456789,
+      userId: "preserve-user-id",
+    };
+    const beforeManifest = { active: "kept", companions: { kept: companion } };
+    writeFileSync(join(stateDir, "menagerie.json"), JSON.stringify(beforeManifest, null, 2));
+
+    const proc = Bun.spawnSync({
+      cmd: [process.execPath, "run", "cli/index.ts", "base", "101-spirit_male"],
+      cwd: join(import.meta.dir, ".."),
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: profileDir,
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(proc.exitCode).toBe(0);
+    const afterManifest = JSON.parse(readFileSync(join(stateDir, "menagerie.json"), "utf8"));
+    expect(afterManifest).toEqual(beforeManifest);
+
+    const config = JSON.parse(readFileSync(join(stateDir, "config.json"), "utf8"));
+    expect(config.activeBitmapBase).toBe("101-spirit_male");
+
+    const status = JSON.parse(readFileSync(join(stateDir, "status.json"), "utf8"));
+    expect(status.bitmapBase).toBe("101-spirit_male");
+    expect(status.name).toBe("KeptBuddy");
+    expect(status.rarity).toBe("legendary");
+    expect(status.species).toBe("dragon");
+    expect(status.shiny).toBe(true);
+    expect(status.hat).toBe("crown");
+  });
+
+  test("interactive base pick selects a base while preserving companion attributes", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-pick-preserve-"));
+    const stateDir = join(profileDir, "buddy-state");
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-pick-user" }));
+
+    const companion = {
+      bones: {
+        rarity: "rare",
+        species: "fox",
+        eye: "•",
+        hat: "halo",
+        shiny: false,
+        stats: { DEBUGGING: 61, PATIENCE: 62, CHAOS: 63, WISDOM: 64, SNARK: 65 },
+        peak: "SNARK",
+        dump: "DEBUGGING",
+      },
+      name: "PickKeep",
+      personality: "Same buddy, different BitmapPunks base.",
+      hatchedAt: 987654321,
+      userId: "base-pick-user-id",
+    };
+    writeFileSync(join(stateDir, "menagerie.json"), JSON.stringify({ active: "pickkeep", companions: { pickkeep: companion } }, null, 2));
+
+    const proc = Bun.spawnSync({
+      cmd: ["bash", "-lc", `printf '1\\n' | ${JSON.stringify(process.execPath)} run cli/index.ts base pick "spirit male"`],
+      cwd: join(import.meta.dir, ".."),
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: profileDir,
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(proc.exitCode).toBe(0);
+    const output = Buffer.from(proc.stdout).toString("utf8");
+    expect(output).toContain("Pick BitmapPunks base matching");
+    expect(output).toContain("all buddy attributes stay the same");
+
+    const manifest = JSON.parse(readFileSync(join(stateDir, "menagerie.json"), "utf8"));
+    expect(manifest.companions.pickkeep).toEqual(companion);
+    const config = JSON.parse(readFileSync(join(stateDir, "config.json"), "utf8"));
+    expect(config.activeBitmapBase).toBe("101-spirit_male");
+    const status = JSON.parse(readFileSync(join(stateDir, "status.json"), "utf8"));
+    expect(status.bitmapBase).toBe("101-spirit_male");
+    expect(status.name).toBe("PickKeep");
+    expect(status.rarity).toBe("rare");
+  });
+
   test("falls back to the default marker when persisted base config is invalid", () => {
     const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-invalid-current-"));
     const stateDir = join(profileDir, "buddy-state");

@@ -86,9 +86,10 @@ Buddy:
   pick              Interactive two-pane buddy picker (browse saved + search)
   hunt              Search for a specific buddy (non-interactive)
   verify            Verify what buddy your current ID produces
-  base <trait>      Choose the active BitmapPunks BASE trait for rendering
-  base list [query] Browse or filter BitmapPunks BASE traits
-  base default      Reset BitmapPunks BASE to the default trait
+  base <trait>        Choose the active BitmapPunks BASE trait for rendering
+  base pick [query]   Interactive BASE picker; keeps buddy stats/name/etc unchanged
+  base list [query]   Browse or filter BitmapPunks BASE traits
+  base default        Reset BitmapPunks BASE to the default trait
 
   upgrade           Pull latest version + reinstall (add --check to just check)
 
