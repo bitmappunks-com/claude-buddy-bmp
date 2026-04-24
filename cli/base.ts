@@ -43,7 +43,16 @@ function ensureCompanion(): Companion {
 
 const args = normalizedArgs();
 const bases = listBitmapBaseTraits();
-const current = loadConfig().activeBitmapBase ?? DEFAULT_BITMAP_BASE;
+function currentBaseKey(): string {
+  const configuredBase = loadConfig().activeBitmapBase;
+  try {
+    return resolveBitmapBaseSelection(configuredBase ?? DEFAULT_BITMAP_BASE);
+  } catch {
+    return DEFAULT_BITMAP_BASE;
+  }
+}
+
+const current = currentBaseKey();
 
 function printBaseList(): void {
   console.log("Available BitmapPunks bases:");

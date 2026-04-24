@@ -2,6 +2,7 @@ import { describe, test, expect } from "bun:test";
 import { existsSync } from "fs";
 import { join } from "path";
 import * as avatar from "./bitmappunk-avatar.ts";
+import type { ReactionReason } from "./reactions.ts";
 import {
   applyBitmapAction,
   buildBitmapStatusArt,
@@ -116,6 +117,38 @@ describe("bitmap item selection", () => {
   test("falls back to a deterministic idle pool choice when no reason is provided", () => {
     expect(resolveBitmapItemSelection(undefined, undefined, 5)).toBe(resolveBitmapItemSelection(undefined, undefined, 5));
     expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(resolveBitmapItemSelection(undefined, undefined, 5));
+  });
+  test("maps additional file, language, temporal, and recovery triggers instead of dropping them into generic idle", () => {
+    const fireReasons = ["doc-file", "binary-file", "gitignore", "readme", "lang-typescript"] as const satisfies readonly ReactionReason[];
+    for (const reason of fireReasons) {
+      const chosen = resolveBitmapItemSelection("auto", reason, 2);
+      expect(["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"]).toContain(chosen);
+    }
+
+    const errorReasons = ["late-night-error", "weekend-conflict", "marathon-test-fail", "build-after-push"] as const satisfies readonly ReactionReason[];
+    for (const reason of errorReasons) {
+      const chosen = resolveBitmapItemSelection("auto", reason, 0);
+      expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosen);
+    }
+
+    const successReasons = ["recovery-from-merge-conflict", "streak-10"] as const satisfies readonly ReactionReason[];
+    for (const reason of successReasons) {
+      const chosen = resolveBitmapItemSelection("auto", reason, 1);
+      expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(chosen);
+    }
+  });
+
+  test("keeps newly classified triggers on behavior-specific animation profiles", () => {
+    const languageStatus = buildBitmapStatusArt("100-solana_male", "auto", "lang-typescript", 0);
+    const holidayStatus = buildBitmapStatusArt("100-solana_male", "auto", "halloween", 0);
+    const recoveryStatus = buildBitmapStatusArt("100-solana_male", "auto", "recovery-from-merge-conflict", 0);
+
+    expect(languageStatus.frameSequence.filter((idx) => idx >= 4)).toHaveLength(5);
+    expect(holidayStatus.frameSequence.filter((idx) => idx >= 4)).toHaveLength(4);
+    expect(recoveryStatus.frameSequence.filter((idx) => idx >= 4)).toHaveLength(4);
+    for (const status of [languageStatus, holidayStatus, recoveryStatus]) {
+      expect(status.frameSequence.every((idx) => idx >= 0 && idx < status.frames.length)).toBe(true);
+    }
   });
 });
 

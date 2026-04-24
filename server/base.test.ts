@@ -98,4 +98,27 @@ describe("cli base command", () => {
     const status = JSON.parse(readFileSync(join(profileDir, "buddy-state", "status.json"), "utf8"));
     expect(status.bitmapBase).toBe(DEFAULT_BITMAP_BASE);
   });
+
+  test("falls back to the default marker when persisted base config is invalid", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-invalid-current-"));
+    const stateDir = join(profileDir, "buddy-state");
+    mkdirSync(stateDir, { recursive: true });
+    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-invalid-current-user" }));
+    writeFileSync(join(stateDir, "config.json"), JSON.stringify({ activeBitmapBase: "not-a-real-base" }));
+
+    const proc = Bun.spawnSync({
+      cmd: [process.execPath, "run", "cli/index.ts", "base", "list"],
+      cwd: join(import.meta.dir, ".."),
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: profileDir,
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(proc.exitCode).toBe(0);
+    const output = Buffer.from(proc.stdout).toString("utf8");
+    expect(output).toContain(`*  ${DEFAULT_BITMAP_BASE.split("-")[0]}  ${DEFAULT_BITMAP_BASE}`);
+  });
 });

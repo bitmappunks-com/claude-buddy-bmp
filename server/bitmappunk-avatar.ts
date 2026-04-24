@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import type { ReactionReason } from "./reactions.ts";
 
 const MODULE_DIR = dirname(fileURLToPath(import.meta.url));
 const VENDOR_DIR = join(MODULE_DIR, "..", "vendor", "bmp-gif");
@@ -181,11 +182,30 @@ const FIRE_ITEM_POOL = ["1722-fire_breathing_blue", "1723-fire_breathing_green",
 // Mirrors the reaction reason vocabulary used by hooks/server/index.ts. ITEM is
 // still internal-only; these buckets just let automatic selection react to more
 // real buddy behavior instead of falling through to the same idle loop.
-const ERROR_REASONS = ["error", "test-fail", "lint-fail", "type-error", "build-fail", "security-warning", "deprecation", "merge-conflict", "frustrated", "stuck"] as const;
-const SUCCESS_REASONS = ["success", "all-green", "deploy", "release", "coverage", "happy", "recovery-from-error", "recovery-from-test-fail", "recovery-from-build-fail"] as const;
-const CHURN_REASONS = ["large-diff", "many-edits", "delete-file", "large-file", "create-file", "debug-loop", "write-spree", "search-heavy"] as const;
-const IDLE_REASONS = ["hatch", "pet", "name", "turn", "idle", "push", "commit", "branch", "rebase", "stash", "tag", "late-night", "early-morning", "long-session", "marathon", "weekend", "monday", "friday", "sarcastic"] as const;
-const FIRE_REASONS = ["regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file", "env-file", "test-file", "config-file", "makefile", "package-file", "proto-file", "chaos"] as const;
+const ERROR_REASONS = [
+  "error", "test-fail", "lint-fail", "type-error", "build-fail", "security-warning", "deprecation", "merge-conflict",
+  "frustrated", "stuck", "late-night-error", "marathon-error", "weekend-conflict", "build-after-push", "marathon-test-fail",
+] as const satisfies readonly ReactionReason[];
+const SUCCESS_REASONS = [
+  "success", "all-green", "deploy", "release", "coverage", "happy",
+  "recovery-from-error", "recovery-from-test-fail", "recovery-from-build-fail", "recovery-from-merge-conflict",
+  "streak-3", "streak-5", "streak-10", "streak-20",
+] as const satisfies readonly ReactionReason[];
+const CHURN_REASONS = [
+  "large-diff", "many-edits", "delete-file", "large-file", "create-file", "debug-loop", "write-spree", "search-heavy",
+  "snark", "debugging", "wisdom", "patience",
+] as const satisfies readonly ReactionReason[];
+const IDLE_REASONS = [
+  "hatch", "pet", "turn", "idle", "push", "commit", "branch", "rebase", "stash", "tag",
+  "late-night", "early-morning", "long-session", "marathon", "weekend", "monday", "friday", "late-night-commit", "friday-push",
+  "sarcastic", "new-year", "valentines", "pi-day", "april-fools", "halloween", "christmas", "new-years-eve", "spooky-season",
+] as const satisfies readonly ReactionReason[];
+const FIRE_REASONS = [
+  "regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file", "env-file", "test-file", "doc-file", "config-file",
+  "binary-file", "gitignore", "makefile", "readme", "package-file", "proto-file", "chaos",
+  "lang-python", "lang-typescript", "lang-rust", "lang-go", "lang-java", "lang-ruby", "lang-php", "lang-c", "lang-cpp",
+  "lang-haskell", "lang-swift", "lang-elixir", "lang-zig", "lang-kotlin",
+] as const satisfies readonly ReactionReason[];
 
 type BitmapAnimationProfile = {
   intro: number[];
