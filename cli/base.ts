@@ -54,24 +54,40 @@ function currentBaseKey(): string {
 
 const current = currentBaseKey();
 
-function printBaseList(): void {
-  console.log("Available BitmapPunks bases:");
-  for (const base of bases) {
+function normalizeSearch(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "");
+}
+
+function printBaseList(filter?: string): void {
+  const trimmedFilter = filter?.trim() ?? "";
+  const normalizedFilter = normalizeSearch(trimmedFilter);
+  const visibleBases = normalizedFilter
+    ? bases.filter((base) => {
+        const haystack = [base.key, base.name, base.displayName, base.gender, String(base.id)].map(normalizeSearch).join(" ");
+        return haystack.includes(normalizedFilter);
+      })
+    : bases;
+
+  console.log(normalizedFilter ? `Available BitmapPunks bases matching "${trimmedFilter}":` : "Available BitmapPunks bases:");
+  for (const base of visibleBases) {
     const marker = base.key === current ? "*" : " ";
-    console.log(`${marker} ${String(base.id).padStart(3)}  ${base.key}  (${base.displayName})`);
+    console.log(`${marker} ${String(base.id).padStart(3)}  ${base.key}  (${base.displayName}, ${base.gender})`);
+  }
+  if (visibleBases.length === 0) {
+    console.log("No matching bases. Try a key fragment like `solana`, a gender like `female`, or run `base list` with no filter.");
   }
 }
 
 if (!args[0]) {
   console.log(`Active BitmapPunks base: ${current}`);
-  console.log("Use `base list` to browse all bases or `base default` to reset to the default trait.");
+  console.log("Use `base list` to browse all bases, `base list <search>` to filter, or `base default` to reset to the default trait.");
   console.log(`Available bases: ${bases.slice(0, 12).map((base) => base.key).join(", ")}${bases.length > 12 ? ", ..." : ""}`);
   process.exit(0);
 }
 
 const command = args[0];
 if (command === "list") {
-  printBaseList();
+  printBaseList(args.slice(1).join(" "));
   process.exit(0);
 }
 
@@ -85,7 +101,7 @@ try {
 }
 if (!chosen) {
   console.error(`Unknown BitmapPunks base: ${requested}`);
-  console.error("Try `base list` to browse available traits.");
+  console.error("Try `base list` to browse available traits or `base list <search>` to narrow them down.");
   console.error(`Quick picks: ${bases.slice(0, 12).map((base) => base.key).join(", ")}${bases.length > 12 ? ", ..." : ""}`);
   process.exit(1);
 }

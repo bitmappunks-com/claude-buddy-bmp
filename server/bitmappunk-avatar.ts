@@ -178,6 +178,12 @@ const IDLE_ITEM_POOL = ["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-s
 const ERROR_ITEM_POOL = ["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"] as const;
 const SUCCESS_ITEM_POOL = ["1744-bubble_gum_large", "1749-sleep_bubble"] as const;
 const FIRE_ITEM_POOL = ["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"] as const;
+const CHAOS_ITEM_POOL = [
+  ...IDLE_ITEM_POOL,
+  ...ERROR_ITEM_POOL,
+  ...SUCCESS_ITEM_POOL,
+  ...FIRE_ITEM_POOL,
+] as const;
 
 // Mirrors the reaction reason vocabulary used by hooks/server/index.ts. ITEM is
 // still internal-only; these buckets just let automatic selection react to more
@@ -200,9 +206,10 @@ const IDLE_REASONS = [
   "late-night", "early-morning", "long-session", "marathon", "weekend", "monday", "friday", "late-night-commit", "friday-push",
   "sarcastic", "new-year", "valentines", "pi-day", "april-fools", "halloween", "christmas", "new-years-eve", "spooky-season",
 ] as const satisfies readonly ReactionReason[];
+const CHAOS_REASONS = ["chaos"] as const satisfies readonly ReactionReason[];
 const FIRE_REASONS = [
   "regex-file", "css-file", "sql-file", "docker-file", "ci-file", "lock-file", "env-file", "test-file", "doc-file", "config-file",
-  "binary-file", "gitignore", "makefile", "readme", "package-file", "proto-file", "chaos",
+  "binary-file", "gitignore", "makefile", "readme", "package-file", "proto-file",
   "lang-python", "lang-typescript", "lang-rust", "lang-go", "lang-java", "lang-ruby", "lang-php", "lang-c", "lang-cpp",
   "lang-haskell", "lang-swift", "lang-elixir", "lang-zig", "lang-kotlin",
 ] as const satisfies readonly ReactionReason[];
@@ -266,6 +273,14 @@ function resolveBitmapAnimationProfile(reason?: string, seed: number = 0): Bitma
     return pickProfile(animationSeed, [
       { intro: [0, 1, 0, 1, 0], outro: [0, 2, 0, 0], itemBurst: 4 },
       { intro: [0, 2, 0, 1, 0], outro: [0, 1, 0, 0], itemBurst: 3 },
+    ]);
+  }
+
+  if (reasonIn(normalized, CHAOS_REASONS)) {
+    return pickProfile(animationSeed, [
+      { intro: [0, 3, 1, 0, 2, 0], outro: [3, 0, 1, 0, 2, 0], itemBurst: 6 },
+      { intro: [0, 1, 0, 3, 0, 2], outro: [0, 2, 3, 0, 1, 0], itemBurst: 5 },
+      { intro: [0, 2, 0, 1, 3, 0], outro: [1, 0, 3, 0, 2, 0], itemBurst: 4 },
     ]);
   }
 
@@ -347,6 +362,9 @@ export function resolveBitmapItemSelection(
   }
   if (reasonIn(normalized, IDLE_REASONS) || reasonIn(normalized, CHURN_REASONS)) {
     return pickFromPool(IDLE_ITEM_POOL, selectionSeed);
+  }
+  if (reasonIn(normalized, CHAOS_REASONS)) {
+    return pickFromPool(CHAOS_ITEM_POOL, selectionSeed);
   }
   if (reasonIn(normalized, FIRE_REASONS)) {
     return pickFromPool(FIRE_ITEM_POOL, selectionSeed);

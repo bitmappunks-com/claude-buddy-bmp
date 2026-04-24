@@ -90,6 +90,30 @@ describe("cli base command", () => {
     expect(status.bitmapBase).toBe("39-demon_purple_female");
   });
 
+  test("filters the base list by user search text without changing config", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-list-filter-"));
+    mkdirSync(profileDir, { recursive: true });
+    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "base-list-filter-user" }));
+
+    const proc = Bun.spawnSync({
+      cmd: [process.execPath, "run", "cli/index.ts", "base", "list", "purple", "female"],
+      cwd: join(import.meta.dir, ".."),
+      env: {
+        ...process.env,
+        CLAUDE_CONFIG_DIR: profileDir,
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(proc.exitCode).toBe(0);
+    const output = Buffer.from(proc.stdout).toString("utf8");
+    expect(output).toContain('Available BitmapPunks bases matching "purple female"');
+    expect(output).toContain("39-demon_purple_female");
+    expect(output).toContain("female)");
+    expect(output).not.toContain("100-solana_male");
+  });
+
   test("supports resetting the active bitmap base back to the default trait", () => {
     const profileDir = mkdtempSync(join(tmpdir(), "buddy-base-default-"));
     mkdirSync(profileDir, { recursive: true });
