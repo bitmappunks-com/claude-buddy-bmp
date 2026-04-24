@@ -173,16 +173,9 @@ export function listBitmapBaseTraits(): BitmapBaseInfo[] {
 
 export const DEFAULT_BITMAP_BASE = listBitmapBaseTraits()[0]?.key ?? "100-solana_male";
 
-const IDLE_ITEM_POOL = ["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"] as const;
 const ERROR_ITEM_POOL = ["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"] as const;
 const SUCCESS_ITEM_POOL = ["1744-bubble_gum_large", "1749-sleep_bubble"] as const;
 const FIRE_ITEM_POOL = ["1722-fire_breathing_blue", "1723-fire_breathing_green", "1724-fire_breathing_purple", "1725-fire_breathing_red"] as const;
-const CHAOS_ITEM_POOL = [
-  ...IDLE_ITEM_POOL,
-  ...ERROR_ITEM_POOL,
-  ...SUCCESS_ITEM_POOL,
-  ...FIRE_ITEM_POOL,
-] as const;
 
 // Mirrors the reaction reason vocabulary used by hooks/server/index.ts. ITEM is
 // still internal-only; these buckets just let automatic selection react to more
@@ -341,10 +334,15 @@ function shouldUseMixedIdleItems(reason?: string): boolean {
   return !normalizedBitmapReason(reason);
 }
 
+function allBitmapItemKeys(): string[] {
+  return listBitmapItems().map((item) => item.key);
+}
+
 function composeMixedIdleItemFrames(baseKey: string, seed: number, frameCount: number = 8): BitmapCanvas[] {
-  const start = Math.abs(seed) % IDLE_ITEM_POOL.length;
+  const itemPool = allBitmapItemKeys();
+  const start = Math.abs(seed) % itemPool.length;
   return Array.from({ length: frameCount }, (_, index) => {
-    const itemKey = IDLE_ITEM_POOL[(start + Math.floor(index / 2)) % IDLE_ITEM_POOL.length]!;
+    const itemKey = itemPool[(start + Math.floor(index / 2)) % itemPool.length]!;
     const itemFrames = composeBitmapItemFrames(baseKey, itemKey);
     const frameIndex = Math.abs(seed + index) % itemFrames.length;
     return itemFrames[frameIndex]!;
@@ -401,16 +399,16 @@ export function resolveBitmapItemSelection(
     reasonIn(normalized, TEMPORAL_REASONS) ||
     reasonIn(normalized, CHURN_REASONS)
   ) {
-    return pickFromPool(IDLE_ITEM_POOL, selectionSeed);
+    return pickFromPool(allBitmapItemKeys(), selectionSeed);
   }
   if (reasonIn(normalized, CHAOS_REASONS)) {
-    return pickFromPool(CHAOS_ITEM_POOL, selectionSeed);
+    return pickFromPool(allBitmapItemKeys(), selectionSeed);
   }
   if (reasonIn(normalized, FIRE_REASONS)) {
     return pickFromPool(FIRE_ITEM_POOL, selectionSeed);
   }
 
-  return pickFromPool(IDLE_ITEM_POOL, selectionSeed);
+  return pickFromPool(allBitmapItemKeys(), selectionSeed);
 }
 
 export function loadBitmapBaseTrait(base: string): BitmapBaseTrait {

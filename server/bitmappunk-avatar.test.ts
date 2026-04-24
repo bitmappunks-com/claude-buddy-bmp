@@ -118,12 +118,19 @@ describe("bitmap item selection", () => {
 
   test("keeps churn/editing reasons automatic but distinct from failure and success pools", () => {
     const chosen = resolveBitmapItemSelection("debug-loop", 3);
-    expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(chosen);
+    expect(listBitmapItems().map((item) => item.key)).toContain(chosen);
   });
 
-  test("falls back to a deterministic idle pool choice when no reason is provided", () => {
+  test("falls back to a deterministic idle choice from every vendored item when no reason is provided", () => {
+    const itemKeys = listBitmapItems().map((item) => item.key);
+    const selectedAcrossSeeds = new Set(Array.from({ length: itemKeys.length * 3 }, (_, seed) => resolveBitmapItemSelection(undefined, seed)));
+
     expect(resolveBitmapItemSelection(undefined, 5)).toBe(resolveBitmapItemSelection(undefined, 5));
-    expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(resolveBitmapItemSelection(undefined, 5));
+    expect(itemKeys.length).toBeGreaterThan(4);
+    expect(selectedAcrossSeeds.size).toBe(itemKeys.length);
+    for (const selected of selectedAcrossSeeds) {
+      expect(itemKeys).toContain(selected);
+    }
   });
   test("maps additional file, language, temporal, and recovery triggers instead of dropping them into generic idle", () => {
     const fireReasons = ["doc-file", "binary-file", "gitignore", "readme", "lang-typescript"] as const satisfies readonly ReactionReason[];
@@ -183,8 +190,9 @@ describe("bitmap item selection", () => {
     const pushStatus = buildBitmapStatusArt("100-solana_male", "push", 0);
     const lateNightStatus = buildBitmapStatusArt("100-solana_male", "late-night", 0);
 
+    const itemKeys = listBitmapItems().map((item) => item.key);
     for (const status of [commitStatus, pushStatus, lateNightStatus]) {
-      expect(["1-420", "1720-cigarette", "1721-corn_cob_pipe", "1749-sleep_bubble"]).toContain(status.bitmapItem!);
+      expect(itemKeys).toContain(status.bitmapItem!);
       expect(status.frameSequence.every((idx) => idx >= 0 && idx < status.frames.length)).toBe(true);
       expect(status.frameSequence.filter((idx) => idx >= 4).length).toBeGreaterThanOrEqual(3);
       expect(status.frameSequence.slice(0, 6).some((idx) => idx === 1 || idx === 2 || idx === 3)).toBe(true);
