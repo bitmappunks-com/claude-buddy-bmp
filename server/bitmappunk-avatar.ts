@@ -207,10 +207,10 @@ const FIRE_REASONS = [
   "lang-haskell", "lang-swift", "lang-elixir", "lang-zig", "lang-kotlin",
 ] as const satisfies readonly ReactionReason[];
 
-type BitmapAnimationProfile = {
-  intro: number[];
-  outro: number[];
-  itemBurst: number;
+type BitmapActionBlock = {
+  name: string;
+  itemKey?: string;
+  indices: number[];
 };
 
 function pickFromPool(pool: readonly string[], seed: number): string {
@@ -240,113 +240,44 @@ function reasonIn(reason: string, pool: readonly string[]): boolean {
   return pool.includes(reason);
 }
 
-function pickProfile(seed: number, profiles: BitmapAnimationProfile[]): BitmapAnimationProfile {
-  const profile = profiles[Math.abs(seed) % profiles.length]!;
-  return {
-    intro: [...profile.intro],
-    outro: [...profile.outro],
-    itemBurst: profile.itemBurst,
-  };
-}
-
-function resolveBitmapAnimationProfile(reason?: string, seed: number = 0): BitmapAnimationProfile {
+function itemPoolForReason(reason?: string): string[] {
   const normalized = normalizedBitmapReason(reason);
-  const animationSeed = mixBitmapAnimationSeed(normalized, seed);
-
-  if (reasonIn(normalized, STREAK_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 3, 1, 3, 0, 2], outro: [3, 0, 2, 0, 3, 0], itemBurst: 5 },
-      { intro: [0, 1, 0, 3, 1, 3], outro: [0, 3, 0, 2, 0, 0], itemBurst: 6 },
-    ]);
+  if (reasonIn(normalized, STREAK_REASONS) || reasonIn(normalized, ERROR_REASONS)) {
+    return [...ERROR_ITEM_POOL];
   }
-
-  if (reasonIn(normalized, ERROR_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 3, 0, 1, 0], outro: [3, 0, 2, 0, 0], itemBurst: 5 },
-      { intro: [0, 1, 3, 0, 3], outro: [0, 2, 0, 3, 0], itemBurst: 4 },
-    ]);
-  }
-
   if (reasonIn(normalized, SUCCESS_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 1, 0, 1, 0], outro: [0, 2, 0, 0], itemBurst: 4 },
-      { intro: [0, 2, 0, 1, 0], outro: [0, 1, 0, 0], itemBurst: 3 },
-    ]);
+    return [...SUCCESS_ITEM_POOL];
   }
-
-  if (reasonIn(normalized, CHAOS_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 3, 1, 0, 2, 0], outro: [3, 0, 1, 0, 2, 0], itemBurst: 6 },
-      { intro: [0, 1, 0, 3, 0, 2], outro: [0, 2, 3, 0, 1, 0], itemBurst: 5 },
-      { intro: [0, 2, 0, 1, 3, 0], outro: [1, 0, 3, 0, 2, 0], itemBurst: 4 },
-    ]);
-  }
-
   if (reasonIn(normalized, FIRE_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 1, 3, 1, 0], outro: [0, 3, 0, 2, 0], itemBurst: 5 },
-      { intro: [0, 3, 1, 0, 1], outro: [3, 0, 2, 0, 0], itemBurst: 5 },
-    ]);
+    return [...FIRE_ITEM_POOL];
   }
-
-  if (reasonIn(normalized, CHURN_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 1, 0, 3, 0], outro: [0, 1, 0, 2, 0], itemBurst: 4 },
-      { intro: [0, 3, 0, 1, 0], outro: [0, 2, 0, 1, 0], itemBurst: 4 },
-    ]);
-  }
-
-  if (reasonIn(normalized, GIT_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 1, 0, 0, 3], outro: [0, 1, 0, 2, 0], itemBurst: 3 },
-      { intro: [0, 0, 1, 0, 3, 0], outro: [0, 2, 0, 1, 0], itemBurst: 4 },
-      { intro: [0, 3, 0, 1, 0], outro: [0, 0, 2, 0, 0], itemBurst: 3 },
-    ]);
-  }
-
-  if (reasonIn(normalized, TEMPORAL_REASONS)) {
-    return pickProfile(animationSeed, [
-      { intro: [0, 0, 2, 0, 0, 1], outro: [0, 2, 0, 0, 0], itemBurst: 3 },
-      { intro: [0, 3, 0, 0, 2, 0], outro: [0, 3, 0, 2, 0, 0], itemBurst: 4 },
-      { intro: [0, 0, 1, 0, 0, 2], outro: [0, 0, 2, 0, 1, 0], itemBurst: 3 },
-    ]);
-  }
-
-  return pickProfile(animationSeed, [
-    { intro: [0, 0, 0, 1, 0, 0], outro: [0, 3, 0, 2, 0, 0], itemBurst: reasonIn(normalized, IDLE_REASONS) ? 4 : 3 },
-    { intro: [0, 0, 1, 0, 0, 3], outro: [0, 2, 0, 0, 0], itemBurst: 3 },
-  ]);
+  return allBitmapItemKeys();
 }
 
-function buildItemBurstSequence(itemIndices: number[], seed: number, count: number): number[] {
-  if (itemIndices.length === 0 || count <= 0) return [];
-  const start = Math.abs(seed) % itemIndices.length;
-  const burstLength = Math.min(count, itemIndices.length);
-  const direction = Math.abs(seed) % 2 === 0 ? 1 : -1;
-  const step = Math.abs(seed) % 3 === 0 ? 1 : itemIndices.length > 2 ? 3 : 1;
-  return Array.from({ length: burstLength }, (_, offset) => {
-    const index = (start + direction * offset * step) % itemIndices.length;
-    return itemIndices[(index + itemIndices.length) % itemIndices.length]!;
-  });
+function randomStep(seed: number): number {
+  return (Math.imul(seed, 1664525) + 1013904223) >>> 0;
 }
 
-function shouldUseMixedIdleItems(reason?: string): boolean {
-  return !normalizedBitmapReason(reason);
+function buildRandomActionSequence(blocks: BitmapActionBlock[], seed: number): number[] {
+  if (blocks.length === 0) return [0];
+  const sequence: number[] = [0, 0, 0];
+  const mandatory = blocks.slice(0, Math.min(2, blocks.length));
+  let state = seed >>> 0;
+  for (const block of mandatory) {
+    sequence.push(0, 0, ...block.indices, 0);
+  }
+
+  const randomActionCount = Math.min(10, Math.max(4, blocks.length));
+  for (let i = 0; i < randomActionCount; i++) {
+    state = randomStep(state + i + 1);
+    const block = blocks[state % blocks.length]!;
+    sequence.push(0, 0, ...block.indices, 0);
+  }
+  return sequence;
 }
 
 function allBitmapItemKeys(): string[] {
   return listBitmapItems().map((item) => item.key);
-}
-
-function composeMixedIdleItemFrames(baseKey: string, seed: number, frameCount: number = 8): BitmapCanvas[] {
-  const itemPool = allBitmapItemKeys();
-  const start = Math.abs(seed) % itemPool.length;
-  return Array.from({ length: frameCount }, (_, index) => {
-    const itemKey = itemPool[(start + Math.floor(index / 2)) % itemPool.length]!;
-    const itemFrames = composeBitmapItemFrames(baseKey, itemKey);
-    const frameIndex = Math.abs(seed + index) % itemFrames.length;
-    return itemFrames[frameIndex]!;
-  });
 }
 
 export function resolveBitmapBaseSelection(requestedBase?: string): string {
@@ -677,31 +608,44 @@ export function buildBitmapStatusArt(
   seed: number = 0,
 ): BitmapStatusArt {
   const trait = loadBitmapBaseTrait(baseKey);
-  const resolvedItem = resolveBitmapItemSelection(reason, seed);
-  const profile = resolveBitmapAnimationProfile(reason, seed);
   const animationSeed = mixBitmapAnimationSeed(normalizedBitmapReason(reason), seed);
   const idle = composeBaseCanvas(trait);
-  const move = applyBitmapAction(trait.key, "move")[1];
-  const blink = applyBitmapAction(trait.key, "blink")[1];
-  const useMixedIdleItems = shouldUseMixedIdleItems(reason);
-  const itemCanvases = useMixedIdleItems
-    ? composeMixedIdleItemFrames(trait.key, animationSeed)
-    : composeBitmapItemFrames(trait.key, resolvedItem);
-  const canvases = [idle, move, cloneCanvas(idle), blink, ...itemCanvases];
+  const canvases: BitmapCanvas[] = [idle];
+  const blocks: BitmapActionBlock[] = [];
+
+  const blinkStart = canvases.length;
+  const blinkCanvases = applyBitmapAction(trait.key, "blink");
+  canvases.push(...blinkCanvases);
+  blocks.push({ name: "blink", indices: blinkCanvases.map((_, index) => blinkStart + index) });
+
+  const lookStart = canvases.length;
+  const lookCanvases = applyBitmapAction(trait.key, "move");
+  canvases.push(...lookCanvases);
+  blocks.push({ name: "look", indices: lookCanvases.map((_, index) => lookStart + index) });
+
+  const itemKeys = itemPoolForReason(reason);
+  for (const itemKey of itemKeys) {
+    const itemStart = canvases.length;
+    const itemCanvases = composeBitmapItemFrames(trait.key, itemKey);
+    canvases.push(...itemCanvases);
+    blocks.push({
+      name: `item:${itemKey}`,
+      itemKey,
+      indices: itemCanvases.map((_, index) => itemStart + index),
+    });
+  }
+
   const framesHalfblock = canvases.map((canvas) => renderCanvas(canvas, "halfblock").join("\n"));
   const framesFullcell = canvases.map((canvas) => renderCanvas(canvas, "fullcell").join("\n"));
   const mode = detectRenderMode();
-  const itemOffset = 4;
-  const itemIndices = itemCanvases.map((_, index) => itemOffset + index);
-  const itemBurst = buildItemBurstSequence(itemIndices, animationSeed, profile.itemBurst);
 
   return {
     bitmapBase: trait.key,
-    bitmapItem: useMixedIdleItems ? "auto" : resolvedItem,
+    bitmapItem: reason ? resolveBitmapItemSelection(reason, seed) : "auto",
     frames: mode === "halfblock" ? [...framesHalfblock] : [...framesFullcell],
     framesHalfblock,
     framesFullcell,
-    frameSequence: [...profile.intro, ...itemBurst, ...profile.outro],
+    frameSequence: buildRandomActionSequence(blocks, animationSeed),
   };
 }
 

@@ -13,6 +13,42 @@ import {
   resolveBitmapItemSelection,
 } from "./bitmappunk-avatar.ts";
 
+const BLINK_BLOCK = [1, 2, 3];
+const LOOK_BLOCK = [4, 5, 6];
+const FIRST_ITEM_FRAME_INDEX = 7;
+const ITEM_FRAME_COUNT = 8;
+
+function containsBlock(sequence: number[], block: number[]): boolean {
+  return sequence.some((_, index) => block.every((frame, offset) => sequence[index + offset] === frame));
+}
+
+function nonIdleRuns(sequence: number[]): number[][] {
+  const runs: number[][] = [];
+  let run: number[] = [];
+  for (const frame of sequence) {
+    if (frame === 0) {
+      if (run.length > 0) runs.push(run);
+      run = [];
+    } else {
+      run.push(frame);
+    }
+  }
+  if (run.length > 0) runs.push(run);
+  return runs;
+}
+
+function expectOnlyCompleteActionRuns(sequence: number[]): void {
+  for (const run of nonIdleRuns(sequence)) {
+    const isBlink = run.join(",") === BLINK_BLOCK.join(",");
+    const isLook = run.join(",") === LOOK_BLOCK.join(",");
+    const isItem =
+      run.length === ITEM_FRAME_COUNT &&
+      run[0] >= FIRST_ITEM_FRAME_INDEX &&
+      run.every((frame, offset) => frame === run[0] + offset);
+    expect(isBlink || isLook || isItem).toBe(true);
+  }
+}
+
 describe("vendored bmp-gif base traits", () => {
   test("exports generic default-frame names instead of hello-specific constants", () => {
     expect(Object.keys(avatar).some((key) => key.includes("HELLO_BITMAPPUNK"))).toBe(false);
@@ -171,16 +207,17 @@ describe("bitmap item selection", () => {
     }
   });
 
-  test("keeps newly classified triggers on behavior-specific animation profiles", () => {
+  test("keeps newly classified triggers on behavior-specific complete action scheduling", () => {
     const languageStatus = buildBitmapStatusArt("100-solana_male", "lang-typescript", 0);
     const holidayStatus = buildBitmapStatusArt("100-solana_male", "halloween", 0);
     const recoveryStatus = buildBitmapStatusArt("100-solana_male", "recovery-from-merge-conflict", 0);
 
-    expect(languageStatus.frameSequence.filter((idx) => idx >= 4)).toHaveLength(5);
-    expect(holidayStatus.frameSequence.filter((idx) => idx >= 4)).toHaveLength(4);
-    expect(recoveryStatus.frameSequence.filter((idx) => idx >= 4).length).toBeGreaterThanOrEqual(3);
     for (const status of [languageStatus, holidayStatus, recoveryStatus]) {
       expect(status.frameSequence.every((idx) => idx >= 0 && idx < status.frames.length)).toBe(true);
+      expect(containsBlock(status.frameSequence, BLINK_BLOCK)).toBe(true);
+      expect(containsBlock(status.frameSequence, LOOK_BLOCK)).toBe(true);
+      expect(status.frameSequence.some((idx) => idx >= FIRST_ITEM_FRAME_INDEX)).toBe(true);
+      expectOnlyCompleteActionRuns(status.frameSequence);
     }
   });
 
@@ -194,8 +231,10 @@ describe("bitmap item selection", () => {
     for (const status of [commitStatus, pushStatus, lateNightStatus]) {
       expect(itemKeys).toContain(status.bitmapItem!);
       expect(status.frameSequence.every((idx) => idx >= 0 && idx < status.frames.length)).toBe(true);
-      expect(status.frameSequence.filter((idx) => idx >= 4).length).toBeGreaterThanOrEqual(3);
-      expect(status.frameSequence.slice(0, 6).some((idx) => idx === 1 || idx === 2 || idx === 3)).toBe(true);
+      expect(status.frameSequence.some((idx) => idx >= FIRST_ITEM_FRAME_INDEX)).toBe(true);
+      expect(containsBlock(status.frameSequence, BLINK_BLOCK)).toBe(true);
+      expect(containsBlock(status.frameSequence, LOOK_BLOCK)).toBe(true);
+      expectOnlyCompleteActionRuns(status.frameSequence);
     }
     expect(commitStatus.frameSequence).not.toEqual(idleStatus.frameSequence);
     expect(pushStatus.frameSequence).not.toEqual(commitStatus.frameSequence);
@@ -209,26 +248,31 @@ describe("buildBitmapStatusArt", () => {
     const chosenItem = status.bitmapItem!;
     expect(status.bitmapBase).toBe("100-solana_male");
     expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(chosenItem);
-    expect(status.frames).toHaveLength(12);
-    expect(status.framesHalfblock).toHaveLength(12);
-    expect(status.framesFullcell).toHaveLength(12);
-    const itemBurst = status.frameSequence.filter((idx) => idx >= 4);
-    expect(itemBurst.length).toBeGreaterThanOrEqual(4);
-    expect(itemBurst.length).toBeLessThan(8);
+    expect(status.frames).toHaveLength(FIRST_ITEM_FRAME_INDEX + 5 * ITEM_FRAME_COUNT);
+    expect(status.framesHalfblock).toHaveLength(status.frames.length);
+    expect(status.framesFullcell).toHaveLength(status.frames.length);
     expect(status.frameSequence.every((idx) => idx >= 0 && idx < status.frames.length)).toBe(true);
+    expect(containsBlock(status.frameSequence, BLINK_BLOCK)).toBe(true);
+    expect(containsBlock(status.frameSequence, LOOK_BLOCK)).toBe(true);
+    expect(status.frameSequence.some((idx) => idx >= FIRST_ITEM_FRAME_INDEX)).toBe(true);
+    expectOnlyCompleteActionRuns(status.frameSequence);
     expect(status.frames[0]).toMatch(/\x1b\[(?:38|48);2;/);
-    expect(status.frames[1]).not.toBe(status.frames[0]);
-    expect(status.frames[3]).not.toBe(status.frames[0]);
-    expect(new Set(status.frames.slice(4)).size).toBeGreaterThan(1);
+    expect(status.frames[2]).not.toBe(status.frames[0]);
+    expect(status.frames[5]).not.toBe(status.frames[0]);
+    expect(new Set(status.frames.slice(FIRST_ITEM_FRAME_INDEX)).size).toBeGreaterThan(1);
   });
 
-  test("varies the auto item burst cadence with the seed instead of replaying a simple sequential slice", () => {
+  test("varies scheduled actions with the seed while preserving full contiguous action playback", () => {
     const first = buildBitmapStatusArt("100-solana_male", undefined, 0);
     const second = buildBitmapStatusArt("100-solana_male", undefined, 1);
 
-    expect(first.frameSequence).toEqual([0, 0, 0, 1, 0, 0, 4, 5, 6, 0, 3, 0, 2, 0, 0]);
-    expect(second.frameSequence).toEqual([0, 0, 1, 0, 0, 3, 5, 10, 7, 0, 2, 0, 0, 0]);
     expect(first.frameSequence).not.toEqual(second.frameSequence);
+    for (const status of [first, second]) {
+      expect(containsBlock(status.frameSequence, BLINK_BLOCK)).toBe(true);
+      expect(containsBlock(status.frameSequence, LOOK_BLOCK)).toBe(true);
+      expect(status.frameSequence.some((idx) => idx >= FIRST_ITEM_FRAME_INDEX)).toBe(true);
+      expectOnlyCompleteActionRuns(status.frameSequence);
+    }
   });
 
   test("auto idle status frames include multiple item animations instead of only smoking", () => {
@@ -236,9 +280,10 @@ describe("buildBitmapStatusArt", () => {
     const itemFrames = auto.frames.slice(4);
 
     expect(auto.bitmapItem).toBe("auto");
-    expect(auto.frames).toHaveLength(12);
+    expect(auto.frames).toHaveLength(FIRST_ITEM_FRAME_INDEX + listBitmapItems().length * ITEM_FRAME_COUNT);
     expect(new Set(itemFrames).size).toBeGreaterThan(2);
-    expect(auto.frameSequence.some((idx) => idx >= 4)).toBe(true);
+    expect(auto.frameSequence.some((idx) => idx >= FIRST_ITEM_FRAME_INDEX)).toBe(true);
+    expectOnlyCompleteActionRuns(auto.frameSequence);
   });
 
   test("uses different reaction-specific sequence profiles for adjacent time buckets", () => {

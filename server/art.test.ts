@@ -82,18 +82,18 @@ describe("getStatusFrames", () => {
     ...overrides,
   });
 
-  test("produces 12 frames and a playback sequence that includes a non-looping item burst", () => {
+  test("produces bitmap action frames and a playback sequence that includes complete item actions", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
-    expect(frames).toHaveLength(12);
-    const itemFrames = frameSequence.filter((idx) => idx >= 4);
+    expect(frames.length).toBeGreaterThanOrEqual(23);
+    const itemFrames = frameSequence.filter((idx) => idx >= 7);
     expect(itemFrames.length).toBeGreaterThan(0);
-    expect(itemFrames.length).toBeLessThan(8);
+    expect(frameSequence.every((idx) => idx >= 0 && idx < frames.length)).toBe(true);
   });
 
-  test("every species produces 12 bitmap frames, each matching the generated avatar height", () => {
+  test("every species produces bitmap frames, each matching the generated avatar height", () => {
     for (const species of SPECIES) {
       const { frames } = getStatusFrames(bones({ species }));
-      expect(frames).toHaveLength(12);
+      expect(frames.length).toBeGreaterThanOrEqual(23);
       for (const body of frames) {
         const lines = body.split("\n");
         expect(lines).toHaveLength(DEFAULT_BITMAP_FRAME.length);
@@ -111,12 +111,12 @@ describe("getStatusFrames", () => {
 
   test("blink frame is rendered from vendored action data and differs from the idle frame", () => {
     const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
-    expect(frames[3]).not.toBe(frames[0]);
+    expect(frames[2]).not.toBe(frames[0]);
   });
 
   test("move frame is rendered from vendored action data and differs from the idle frame", () => {
     const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
-    expect(frames[1]).not.toBe(frames[0]);
+    expect(frames[5]).not.toBe(frames[0]);
   });
 
   test("hat overlays are ignored because the implanted avatar fully occupies line 0", () => {
@@ -127,7 +127,7 @@ describe("getStatusFrames", () => {
 
   test("frame sequence references only valid frame indices and includes an item burst", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
-    expect(frameSequence.some((idx) => idx >= 4)).toBe(true);
+    expect(frameSequence.some((idx) => idx >= 7)).toBe(true);
     for (const idx of frameSequence) {
       expect(idx).toBeGreaterThanOrEqual(0);
       expect(idx).toBeLessThan(frames.length);
