@@ -12,9 +12,7 @@
 
 It is built on top of [1270011/claude-buddy](https://github.com/1270011/claude-buddy), preserving the useful MCP/statusline/hook architecture while replacing the old animal-species identity with per-pet BitmapPunks BASE avatars and automatic ITEM animations.
 
-<video src="docs/hero.mp4" controls autoplay muted loop playsinline width="100%"></video>
-
-[Watch the demo video](docs/hero.mp4)
+![Claude Punk demo](docs/hero.gif)
 
 </div>
 
