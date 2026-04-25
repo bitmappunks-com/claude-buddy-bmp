@@ -16,26 +16,6 @@ It is built on top of [1270011/claude-buddy](https://github.com/1270011/claude-b
 
 ---
 
-## Claude Punk vs Claude Buddy
-
-Claude Punk is adapted from [1270011/claude-buddy](https://github.com/1270011/claude-buddy), but it is not just a skin swap. The original Claude Buddy architecture is still useful for Claude Code hooks, MCP tools, local state, and statusline plumbing; Claude Punk changes the companion domain model around BitmapPunks pets.
-
-| Area | Claude Buddy | Claude Punk |
-|---|---|---|
-| Project identity | `claude-buddy`, the original Claude Code buddy project | `claude-punk`, maintained by **bitmappunks**, with `claude-buddy` kept only as a compatibility alias |
-| Companion model | A buddy with animal/species-style identity and legacy cosmetic fields | A pet entity with name, rarity, stats, personality, menagerie slot, and its own BitmapPunks `bitmapBase` |
-| Avatar ownership | Look/customization could behave like global or species-oriented state | Every saved pet owns its own BASE; rendering uses the active pet's `companion.bitmapBase` |
-| User-facing look labels | Legacy species/cosmetic wording could appear in previews | Compact BitmapPunks tuples such as `(Snowman, male)` and `(Demon, purple, male)` |
-| Picking pets | Saved-buddy flow | `pick` manages saved pets and edits only the selected pet's BASE without changing name, rarity, stats, personality, or slot |
-| Hunting | Original generated-buddy search semantics | `hunt` creates a new pet through gender → type → exact look → rarity → name criteria |
-| BASE command | Direct/global base-style customization existed in old flows | No standalone `base <trait>` CLI; BASE selection lives inside `pick` or new-pet creation through `hunt` |
-| ITEM animation | Not the primary product model | ITEM is automatic/statusline-driven; users do not choose ITEM traits directly |
-| Preview metadata | Species, eye, and hat can be visible identity/cosmetic concepts | Legacy `species`, `eye`, and `hat` may remain internally for compatibility, but are not user-facing identity |
-| Raw IDs | Internal IDs may leak in implementation-oriented output | Normal UX shows tuple labels, not vendored keys like `50-snowman_male` |
-| Compatibility | Original package/plugin naming | Primary package/plugin/MCP name is `claude-punk`; `/buddy` and `claude-buddy` remain migration-compatible surfaces |
-
-In short: Claude Buddy is the foundation; Claude Punk is the BitmapPunks product layer. Pets are first-class entities, BASE belongs to each pet, and the UI should describe looks as `(Type, variant, gender)` tuples instead of old animal/species or raw trait-key language.
-
 ## Requirements
 
 - [Bun](https://bun.sh/install) on `PATH`
