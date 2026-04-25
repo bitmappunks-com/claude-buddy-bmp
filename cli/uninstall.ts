@@ -107,11 +107,13 @@ if (existsSync(SKILL_DIR)) {
   warn("Skill not found (already removed)");
 }
 
-// Keep state dir (companion data) — user might want it back.
-// This is profile-scoped when CLAUDE_CONFIG_DIR is set, so other
-// profiles' buddies are unaffected.
+// Remove all Claude Punk state/data. Uninstall should be a full wipe: pets,
+// generated status/config, achievements, reactions, and any leftover popup files.
 if (existsSync(STATE_DIR)) {
-  warn(`Companion data kept at ${STATE_DIR} — delete manually if not needed`);
+  rmSync(STATE_DIR, { recursive: true, force: true });
+  ok(`All Claude Punk data removed from ${STATE_DIR}`);
+} else {
+  warn("Claude Punk data not found (already removed)");
 }
 
 console.log(`\n${GREEN}Done.${NC} Restart Claude Code to apply changes.\n`);

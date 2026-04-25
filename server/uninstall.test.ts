@@ -10,7 +10,6 @@ import {
   writeFileSync,
   readFileSync,
   existsSync,
-  readdirSync,
 } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -61,7 +60,7 @@ describe("cleanupPluginState", () => {
     expect(after.statusLine.command).toBe("/usr/local/bin/my-status.sh");
   });
 
-  test("wipes session-scoped transient files but keeps companion data", () => {
+  test("removes the entire state dir, including companion data", () => {
     writeFileSync(join(stateDir, "reaction.pane-1.json"), "{}");
     writeFileSync(join(stateDir, "reaction.default.json"), "{}");
     writeFileSync(join(stateDir, ".last_reaction.pane-1"), "0");
@@ -77,9 +76,9 @@ describe("cleanupPluginState", () => {
 
     const result = cleanupPluginState(settingsPath, stateDir);
 
-    expect(result.transientFilesRemoved).toBe(9);
-    const remaining = readdirSync(stateDir).sort();
-    expect(remaining).toEqual(["config.json", "menagerie.json", "status.json"]);
+    expect(result.stateDirRemoved).toBe(true);
+    expect(result.stateFilesRemoved).toBe(12);
+    expect(existsSync(stateDir)).toBe(false);
   });
 
   test("is a no-op when settings.json and state dir are both absent", () => {
@@ -90,7 +89,8 @@ describe("cleanupPluginState", () => {
 
     expect(result.statusLineRemoved).toBe(false);
     expect(result.foreignStatusLineKept).toBe(false);
-    expect(result.transientFilesRemoved).toBe(0);
+    expect(result.stateDirRemoved).toBe(false);
+    expect(result.stateFilesRemoved).toBe(0);
     expect(existsSync(missingSettings)).toBe(false);
     expect(existsSync(missingState)).toBe(false);
   });
@@ -100,7 +100,9 @@ describe("cleanupPluginState", () => {
 
     const result = cleanupPluginState(settingsPath, stateDir);
 
-    expect(result.transientFilesRemoved).toBe(0);
+    expect(result.stateDirRemoved).toBe(true);
+    expect(result.stateFilesRemoved).toBe(0);
     expect(result.statusLineRemoved).toBe(false);
+    expect(existsSync(stateDir)).toBe(false);
   });
 });

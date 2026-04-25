@@ -633,7 +633,7 @@ server.tool(
 
 server.tool(
   "buddy_uninstall",
-  "Clean up claude-buddy's writes to Claude Code's settings.json and transient session files in the buddy state dir (resolved via CLAUDE_CONFIG_DIR), in preparation for `claude plugin uninstall`. Companion data (menagerie, status, config) is intentionally preserved so reinstalling restores the buddy. The tool only cleans the plugin's own settings — it never removes a foreign statusLine.",
+  "Clean up claude-punk's writes to Claude Code settings and remove all Claude Punk data in the buddy state dir (resolved via CLAUDE_CONFIG_DIR), in preparation for `claude plugin uninstall`. This removes companion data, generated status/config, achievements, reactions, and popup files. The tool only removes the plugin's own settings — it never removes a foreign statusLine.",
   {},
   async () => {
     const result = cleanupPluginState();
@@ -655,10 +655,13 @@ server.tool(
         "  \u2713 a non-buddy statusLine was detected and left untouched",
       );
     }
-    lines.push(
-      `  \u2713 ${result.transientFilesRemoved} transient session file(s) removed from ${stateDir}`,
-    );
-    lines.push(`  \u2014 companion data at ${stateDir} preserved`);
+    if (result.stateDirRemoved) {
+      lines.push(
+        `  \u2713 all Claude Punk data removed from ${stateDir} (${result.stateFilesRemoved} file(s))`,
+      );
+    } else {
+      lines.push(`  \u2014 no Claude Punk data directory was present at ${stateDir}`);
+    }
     lines.push("");
     lines.push("Now run these commands via the Bash tool, in order:");
     lines.push("");
