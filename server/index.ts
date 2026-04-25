@@ -1,8 +1,8 @@
 #!/usr/bin/env bun
 /**
- * claude-buddy MCP server
+ * claude-punk MCP server
  *
- * Exposes the buddy companion as MCP tools + resources.
+ * Exposes Claude Punk pets as MCP tools + resources.
  * Runs as a stdio transport — Claude Code spawns it automatically.
  */
 
@@ -66,7 +66,7 @@ function getInstructions(): string {
     return "Companion not yet hatched. Use buddy_show to initialize.";
   const b = companion.bones;
   return [
-    `A ${b.rarity} ${b.species} named ${companion.name} watches from the status line.`,
+    `A ${b.rarity} BitmapPunks pet named ${companion.name} watches from the status line.`,
     `Personality: ${companion.personality}`,
     `Peak stat: ${b.peak} (${b.stats[b.peak]}). Dump stat: ${b.dump} (${b.stats[b.dump]}).`,
     ``,
@@ -85,7 +85,7 @@ function getInstructions(): string {
 
 const server = new McpServer(
   {
-    name: "claude-buddy",
+    name: "claude-punk",
     version: "0.3.0",
   },
   {
@@ -141,7 +141,7 @@ function activeSlot(): string {
 
 server.tool(
   "buddy_show",
-  "Show the coding companion with full ASCII art card, stats, and personality",
+  "Show the active Claude Punk pet with BitmapPunks art, stats, and personality",
   {},
   async () => {
     const companion = ensureCompanion();
@@ -204,7 +204,7 @@ server.tool(
 
 server.tool(
   "buddy_stats",
-  "Show detailed companion stats: species, rarity, all stats with bars",
+  "Show detailed Claude Punk pet stats: rarity, stat bars, and active BitmapPunks identity",
   {},
   async () => {
     const companion = ensureCompanion();
@@ -230,14 +230,14 @@ server.tool(
 
 server.tool(
   "buddy_react",
-  "Post a buddy comment. Call this at the END of every response with a short in-character comment from the companion about what just happened. The comment should be 1 sentence, in character, and reference something specific from the conversation — a pitfall noticed, a compliment on clean code, a warning about edge cases, etc. Write the comment yourself based on the companion's personality.",
+  "Post a Claude Punk pet comment. Call this at the END of every response with a short in-character comment from the companion about what just happened. The comment should be 1 sentence, in character, and reference something specific from the conversation — a pitfall noticed, a compliment on clean code, a warning about edge cases, etc. Write the comment yourself based on the companion's personality.",
   {
     comment: z
       .string()
       .min(1)
       .max(150)
       .describe(
-        "The buddy's comment, written in-character (1 short sentence, max 150 chars). Use *asterisks* for actions.",
+        "The pet's comment, written in-character (1 short sentence, max 150 chars). Use *asterisks* for actions.",
       ),
     reason: z
       .enum([
@@ -289,7 +289,7 @@ server.tool(
       .string()
       .min(1)
       .max(14)
-      .describe("New name for your buddy (1-14 characters)"),
+      .describe("New name for your Claude Punk pet (1-14 characters)"),
   },
   async ({ name }) => {
     const companion = ensureCompanion();
@@ -315,7 +315,7 @@ server.tool(
 
 server.tool(
   "buddy_set_personality",
-  "Set a custom personality description for your buddy",
+  "Set a custom personality description for your Claude Punk pet",
   {
     personality: z
       .string()
@@ -351,10 +351,10 @@ server.tool(
   {},
   async () => {
     const help = [
-      "claude-buddy commands",
+      "claude-punk commands (/buddy compatibility)",
       "",
       "In Claude Code:",
-      "  /buddy            Show companion card with ASCII art + stats",
+      "  /buddy            Show Claude Punk pet card with BitmapPunks art + stats",
       "  /buddy help       Show this help",
       "  /buddy pet        Pet your companion",
       "  /buddy stats      Detailed stat card",
@@ -363,11 +363,11 @@ server.tool(
       "  /buddy rename     Rename companion (1-14 chars)",
       "  /buddy personality  Set custom personality text",
       "  /buddy achievements  Show achievement badges",
-      "  /buddy summon     Summon a saved buddy (omit slot for random)",
-      "  /buddy save       Save current buddy to a named slot",
-      "  /buddy list       List all saved buddies",
-      "  /buddy pick       Generate a new random buddy (optional: species, rarity)",
-      "  /buddy dismiss    Remove a saved buddy slot",
+      "  /buddy summon     Summon a saved pet (omit slot for random)",
+      "  /buddy save       Save current pet to a named slot",
+      "  /buddy list       List all saved pets",
+      "  /buddy pick       Launch interactive pet picker (! bun run pick)",
+      "  /buddy dismiss    Remove a saved pet slot",
       "  /buddy frequency  Show or set comment cooldown (tmux only)",
       "  /buddy style      Show or set bubble style (tmux only)",
       "  /buddy position   Show or set bubble position (tmux only)",
@@ -375,16 +375,16 @@ server.tool(
       "  /buddy width      Set bubble text width in chars (10-60, tmux only)",
       "  /buddy margin     Set right-side margin in chars (0-20, tmux only)",
       "  /buddy rainbow    Show or set shiny gradient colors (hex, e.g. #ff0000)",
-      "  /buddy statusline Enable or disable buddy in the status line",
+      "  /buddy statusline Enable or disable Claude Punk in the status line",
       "",
       "CLI:",
       "  bun run help            Show full CLI help",
-      "  bun run show            Display buddy in terminal",
+      "  bun run show            Display active pet in terminal",
       "  bun run pick            Interactive picker (saved/search + BitmapPunks BASE via [b])",
       "  bun run hunt            Create a BitmapPunks pet (gender → type → look)",
       "  bun run doctor          Diagnostic report",
-      "  bun run disable         Temporarily deactivate buddy",
-      "  bun run enable          Re-enable buddy",
+      "  bun run disable         Temporarily deactivate Claude Punk",
+      "  bun run enable          Re-enable Claude Punk",
       "  bun run backup          Snapshot/restore state",
     ].join("\n");
 
@@ -399,7 +399,7 @@ server.tool(
 
 server.tool(
   "buddy_frequency",
-  "Configure how often buddy comments appear in the speech bubble. Returns current settings if called without arguments.",
+  "Configure how often Claude Punk comments appear in the speech bubble. Returns current settings if called without arguments.",
   {
     cooldown: z.number().int().min(0).max(300).optional().describe("Minimum seconds between displayed comments (default 30, 0 = no throttling). The buddy always writes comments, but the display only updates this often."),
   },
@@ -429,7 +429,7 @@ server.tool(
 
 server.tool(
   "buddy_style",
-  "Configure the buddy bubble appearance. Returns current settings if called without arguments.",
+  "Configure the Claude Punk bubble appearance. Returns current settings if called without arguments.",
   {
     style: z
       .enum(["classic", "round"])
@@ -441,7 +441,7 @@ server.tool(
       .enum(["top", "left"])
       .optional()
       .describe(
-        "Bubble position relative to buddy: top (above) or left (beside)",
+        "Bubble position relative to the pet: top (above) or left (beside)",
       ),
     showRarity: z
       .boolean()
@@ -460,7 +460,7 @@ server.tool(
       .min(0)
       .max(20)
       .optional()
-      .describe("Right-side margin between buddy and terminal edge (0–20, default 3)"),
+      .describe("Right-side margin between the pet and terminal edge (0–20, default 3)"),
     rainbow: z
       .array(z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a hex color like #ff0000"))
       .min(1)
@@ -640,10 +640,10 @@ server.tool(
 
     const settingsPath = claudeSettingsPath();
     const stateDir = buddyStateDir();
-    const pluginsCacheDir = join(claudeConfigDir(), "plugins", "cache", "claude-buddy");
+    const pluginsCacheDir = join(claudeConfigDir(), "plugins", "cache", "claude-punk");
 
     const lines: string[] = [];
-    lines.push("claude-buddy: settings.json cleanup complete.");
+    lines.push("claude-punk: settings.json cleanup complete.");
     lines.push("");
     lines.push(
       result.statusLineRemoved
@@ -662,9 +662,9 @@ server.tool(
     lines.push("");
     lines.push("Now run these commands via the Bash tool, in order:");
     lines.push("");
-    lines.push("  claude plugin uninstall claude-buddy@claude-buddy");
-    lines.push("  claude plugin marketplace remove claude-buddy");
-    lines.push(`  rm -rf ${pluginsCacheDir}`);
+    lines.push("  claude plugin uninstall claude-punk@claude-punk");
+    lines.push("  claude plugin marketplace remove claude-punk");
+    lines.push(`  rm -rf ${pluginsCacheDir} ${join(claudeConfigDir(), "plugins", "cache", "claude-buddy")}`);
     lines.push("");
     lines.push(
       "After those three commands the plugin is fully removed. Restart Claude Code to apply.",
@@ -693,7 +693,7 @@ server.tool(
 
 server.tool(
   "buddy_summon",
-  "Summon a buddy by slot name. Loads a saved buddy if the slot exists; generates a new deterministic buddy for unknown slot names. Omit slot to pick randomly from all saved buddies. Your current buddy is NOT destroyed — they stay saved in their slot.",
+  "Summon a Claude Punk pet by slot name. Loads a saved pet if the slot exists; generates a new deterministic pet for unknown slot names. Omit slot to pick randomly from all saved pets. Your current pet is NOT destroyed — it stays saved in its slot.",
   {
     slot: z
       .string()
@@ -701,7 +701,7 @@ server.tool(
       .max(14)
       .optional()
       .describe(
-        "Slot name to summon (e.g. 'fafnir', 'dragon-2'). Omit to pick a random saved buddy.",
+        "Slot name to summon. Omit to pick a random saved pet.",
       ),
   },
   async ({ slot }) => {
@@ -710,7 +710,7 @@ server.tool(
     let targetSlot: string;
 
     if (!slot) {
-      // Random pick from saved buddies
+      // Random pick from saved pets
       const saved = listCompanionSlots();
       if (saved.length === 0) {
         return {
@@ -734,7 +734,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `No buddy found in slot "${targetSlot}". Use /buddy list to see saved buddies.`,
+            text: `No pet found in slot "${targetSlot}". Use /buddy list to see saved pets.`,
           },
         ],
       };
@@ -766,7 +766,7 @@ server.tool(
 
 server.tool(
   "buddy_save",
-  "Save the current buddy to a named slot. Useful for bookmarking before trying a new buddy.",
+  "Save the current Claude Punk pet to a named slot. Useful for bookmarking before trying a new pet.",
   {
     slot: z
       .string()
@@ -805,7 +805,7 @@ server.tool(
 
 server.tool(
   "buddy_list",
-  "List all saved buddies with their slot names, species, and rarity",
+  "List all saved Claude Punk pets with their slot names, BitmapPunks looks, and rarity",
   {},
   async () => {
     const saved = listCompanionSlots();
@@ -839,7 +839,7 @@ server.tool(
 
 server.tool(
   "buddy_dismiss",
-  "Remove a saved buddy by slot name. Cannot dismiss the currently active buddy — switch first with buddy_summon.",
+  "Remove a saved Claude Punk pet by slot name. Cannot dismiss the currently active pet — switch first with buddy_summon.",
   {
     slot: z.string().min(1).max(14).describe("Slot name to remove"),
   },
@@ -864,7 +864,7 @@ server.tool(
         content: [
           {
             type: "text",
-            text: `No buddy found in slot "${targetSlot}". Use buddy_list to see saved buddies.`,
+            text: `No pet found in slot "${targetSlot}". Use buddy_list to see saved pets.`,
           },
         ],
       };
@@ -890,7 +890,7 @@ server.tool(
 
 server.tool(
   "buddy_pick",
-  "Generate a new random buddy and add it to the menagerie. Optionally filter by species and/or rarity. The new buddy becomes the active one.",
+  "Generate a new Claude Punk pet and add it to the menagerie. The new pet gets its own BitmapPunks BASE and becomes active.",
   {
     species: z.enum(SPECIES).optional().describe(
       "Desired species (e.g. 'turtle', 'cat', 'dragon'). If omitted, any species.",
@@ -899,7 +899,7 @@ server.tool(
       "Desired rarity (e.g. 'legendary', 'epic', 'rare'). If omitted, any rarity. Higher rarities need more attempts and may take a moment.",
     ),
     name: z.string().min(1).max(14).optional().describe(
-      "Name for the new buddy (1-14 chars). If omitted, a random name is chosen.",
+      "Name for the new pet (1-14 chars). If omitted, a random name is chosen.",
     ),
   },
   async ({ species, rarity, name }) => {
@@ -999,7 +999,7 @@ server.resource(
       `**${companion.name}'s personality:** ${companion.personality}`,
       `Peak stat: ${companion.bones.peak} (${companion.bones.stats[companion.bones.peak]}). Dump stat: ${companion.bones.dump} (${companion.bones.stats[companion.bones.dump]}).`,
       "",
-      "## End-of-response buddy comment",
+      "## End-of-response Claude Punk comment",
       "",
       `At the very end of EVERY response, after your full answer, append an invisible HTML comment:`,
       "",

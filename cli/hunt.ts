@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * claude-buddy hunt — guided BitmapPunks pet creation
+ * claude-punk hunt — guided BitmapPunks pet creation
  *
  * Flow:
  *   1. Pick gender
@@ -113,7 +113,7 @@ function createCompanionForBase(base: BitmapBaseInfo, rarity: Rarity, requestedN
 async function main() {
   console.log(`
 ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}
-${CYAN}║${NC}  ${BOLD}claude-buddy hunt${NC} — create a BitmapPunks pet            ${CYAN}║${NC}
+${CYAN}║${NC}  ${BOLD}claude-punk hunt${NC} — create a BitmapPunks pet             ${CYAN}║${NC}
 ${CYAN}╚══════════════════════════════════════════════════════════╝${NC}
 `);
 

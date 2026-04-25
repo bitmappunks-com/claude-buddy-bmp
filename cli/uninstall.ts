@@ -1,5 +1,5 @@
 /**
- * claude-buddy uninstall — remove all integrations
+ * claude-punk uninstall — remove all integrations
  */
 
 import { readFileSync, writeFileSync, existsSync, rmSync, readdirSync } from "fs";
@@ -23,7 +23,7 @@ const SKILL_DIR = claudeSkillDir("buddy");
 const STATE_DIR = buddyStateDir();
 const CLAUDE_JSON_PATH = claudeUserConfigPath();
 
-console.log("\nclaude-buddy uninstall\n");
+console.log("\nclaude-punk uninstall\n");
 
 // Stop all popup reopen loops and close any running popup
 try {
@@ -55,7 +55,8 @@ try {
 // Remove MCP server from Claude's user config
 try {
   const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON_PATH, "utf8"));
-  if (claudeJson.mcpServers?.["claude-buddy"]) {
+  if ((claudeJson.mcpServers?.["claude-punk"] || claudeJson.mcpServers?.["claude-buddy"])) {
+    delete claudeJson.mcpServers["claude-punk"];
     delete claudeJson.mcpServers["claude-buddy"];
     if (Object.keys(claudeJson.mcpServers).length === 0) delete claudeJson.mcpServers;
     writeFileSync(CLAUDE_JSON_PATH, JSON.stringify(claudeJson, null, 2));
@@ -80,7 +81,7 @@ try {
     if (settings.hooks?.[hookType]) {
       const before = settings.hooks[hookType].length;
       settings.hooks[hookType] = settings.hooks[hookType].filter(
-        (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+        (h: any) => !h.hooks?.some((hh: any) => (hh.command?.includes("claude-buddy") || hh.command?.includes("claude-punk"))),
       );
       if (settings.hooks[hookType].length < before) {
         ok(`${hookType} hooks removed`);

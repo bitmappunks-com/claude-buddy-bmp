@@ -40,7 +40,7 @@ function getCurrentVersion(): string {
 function banner() {
   console.log(`
 ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}
-${CYAN}║${NC}  ${BOLD}claude-buddy upgrade${NC}                                    ${CYAN}║${NC}
+${CYAN}║${NC}  ${BOLD}claude-punk upgrade${NC}                                     ${CYAN}║${NC}
 ${CYAN}╚══════════════════════════════════════════════════════════╝${NC}
 `);
 }
@@ -48,7 +48,7 @@ ${CYAN}╚═══════════════════════�
 function checkGitRepo(): boolean {
   const isRepo = tryExec("git rev-parse --is-inside-work-tree 2>/dev/null");
   if (isRepo !== "true") {
-    err("Not inside a git repository. Upgrade requires a git clone of claude-buddy.");
+    err("Not inside a git repository. Upgrade requires a git clone of claude-punk.");
     return false;
   }
   return true;
@@ -118,12 +118,12 @@ function installDeps(): boolean {
 }
 
 function reinstallBuddy(): boolean {
-  info("Re-running install-buddy to update integrations...\n");
+  info("Re-running install-punk to update integrations...\n");
   try {
-    execSync("bun run install-buddy 2>&1", { cwd: PROJECT_ROOT, stdio: "inherit" });
+    execSync("bun run install-punk 2>&1", { cwd: PROJECT_ROOT, stdio: "inherit" });
     return true;
   } catch {
-    err("install-buddy failed");
+    err("install-punk failed");
     return false;
   }
 }

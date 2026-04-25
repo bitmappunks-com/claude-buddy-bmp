@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * claude-buddy backup — snapshot all claude-buddy related state
+ * claude-punk backup — snapshot all Claude Punk related state
  *
  * Usage:
  *   bun run backup                 Create a new snapshot
@@ -95,18 +95,18 @@ function createBackup(): string {
     warn(`Skipped: ${SETTINGS} (not found)`);
   }
 
-  // 2. claude.json mcpServers["claude-buddy"]
+  // 2. claude.json mcpServers["claude-punk"] (legacy claude-buddy accepted)
   const claudeJsonRaw = tryRead(CLAUDE_JSON);
   if (claudeJsonRaw) {
     try {
       const claudeJson = JSON.parse(claudeJsonRaw);
-      const ourMcp = claudeJson.mcpServers?.["claude-buddy"];
+      const ourMcp = claudeJson.mcpServers?.["claude-punk"] ?? claudeJson.mcpServers?.["claude-buddy"];
       if (ourMcp) {
         writeFileSync(join(dir, "mcpserver.json"), JSON.stringify(ourMcp, null, 2));
         manifest.files.push("mcpserver.json");
-        ok(`Backed up: ${CLAUDE_JSON} → mcpServers["claude-buddy"]`);
+        ok(`Backed up: ${CLAUDE_JSON} → mcpServers["claude-punk"]`);
       } else {
-        warn(`Skipped: ${CLAUDE_JSON} mcpServers["claude-buddy"] (not registered)`);
+        warn(`Skipped: ${CLAUDE_JSON} mcpServers["claude-punk"] (not registered)`);
       }
     } catch {
       err(`Failed to parse ${CLAUDE_JSON}`);
@@ -150,7 +150,7 @@ function cmdList() {
     info(`Run '${BOLD}bun run backup${NC}' to create one.`);
     return;
   }
-  console.log(`\n${BOLD}claude-buddy backups${NC}\n`);
+  console.log(`\n${BOLD}claude-punk backups${NC}\n`);
   for (const ts of backups) {
     const manifestPath = join(BACKUPS_DIR, ts, "manifest.json");
     const manifest = tryRead(manifestPath);
@@ -217,12 +217,13 @@ function restoreBackup(ts: string) {
       claudeJson = JSON.parse(readFileSync(CLAUDE_JSON, "utf8"));
     } catch { /* empty */ }
     if (!claudeJson.mcpServers) claudeJson.mcpServers = {};
-    claudeJson.mcpServers["claude-buddy"] = ourMcp;
+    delete claudeJson.mcpServers["claude-buddy"];
+    claudeJson.mcpServers["claude-punk"] = ourMcp;
     // Under CLAUDE_CONFIG_DIR the parent dir is not guaranteed to exist
     // if settings.json wasn't in this backup (and so step 1 was skipped).
     mkdirSync(dirname(CLAUDE_JSON), { recursive: true });
     writeFileSync(CLAUDE_JSON, JSON.stringify(claudeJson, null, 2));
-    ok(`Restored: ${CLAUDE_JSON} → mcpServers["claude-buddy"]`);
+    ok(`Restored: ${CLAUDE_JSON} → mcpServers["claude-punk"]`);
   }
 
   // 3. SKILL.md
@@ -266,7 +267,7 @@ const arg = process.argv[3];
 switch (action) {
   case "create":
   case undefined: {
-    console.log(`\n${BOLD}Creating claude-buddy backup...${NC}\n`);
+    console.log(`\n${BOLD}Creating claude-punk backup...${NC}\n`);
     const ts = createBackup();
     console.log(`\n${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
     console.log(`${GREEN}  Backup created: ${ts}${NC}`);
@@ -319,7 +320,7 @@ switch (action) {
   case "--help":
   case "-h":
     console.log(`
-${BOLD}claude-buddy backup${NC} — snapshot and restore all claude-buddy state
+${BOLD}claude-punk backup${NC} — snapshot and restore all Claude Punk state
 
 ${BOLD}Commands:${NC}
   bun run backup                 Create a new snapshot
@@ -331,7 +332,7 @@ ${BOLD}Commands:${NC}
 
 ${BOLD}What gets backed up:${NC}
   - ${SETTINGS}
-  - ${CLAUDE_JSON} mcpServers["claude-buddy"] (only our entry)
+  - ${CLAUDE_JSON} mcpServers["claude-punk"] (only our entry; legacy claude-buddy accepted)
   - ${SKILL}
   - ${STATE_DIR}/menagerie.json
   - ${STATE_DIR}/config.json

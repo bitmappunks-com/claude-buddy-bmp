@@ -1,15 +1,18 @@
 {
-  "name": "claude-buddy",
+  "name": "claude-punk",
   "version": "0.5.2",
-  "description": "Permanent coding companion for Claude Code — survives any update (MVP)",
+  "description": "BitmapPunks-powered Claude Code companion, adapted from 1270011/claude-buddy",
+  "author": "bitmappunks",
   "type": "module",
   "bin": {
+    "claude-punk": "./cli/index.ts",
     "claude-buddy": "./cli/index.ts"
   },
   "scripts": {
     "server": "bun run server/index.ts",
     "pick": "bun run cli/pick.ts",
     "hunt": "bun run cli/hunt.ts",
+    "install-punk": "bun run cli/install.ts",
     "install-buddy": "bun run cli/install.ts",
     "show": "bun run cli/show.ts",
     "doctor": "bun run cli/doctor.ts",
@@ -34,22 +37,24 @@
     "hooks/",
     "statusline/",
     "assets/",
+    "vendor/bmp-gif/",
     ".claude-plugin/",
     "!**/*.test.ts"
   ],
   "keywords": [
     "claude-code",
-    "buddy",
-    "companion",
+    "claude-punk",
+    "bitmappunks",
+    "bitmap-punks",
     "mcp",
     "terminal-pet",
-    "tamagotchi"
+    "statusline"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/1270011/claude-buddy.git"
+    "url": "https://github.com/bitmappunks-com/claude-buddy-bmp.git"
   },
-  "homepage": "https://github.com/1270011/claude-buddy#readme",
+  "homepage": "https://github.com/bitmappunks-com/claude-buddy-bmp#readme",
   "license": "MIT",
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",

@@ -1,5 +1,5 @@
 /**
- * claude-buddy installer
+ * claude-punk installer
  *
  * Registers: MCP server (in Claude's user config), skill, hooks, status line
  * (in settings.json). All paths resolve via server/paths.ts, so the installer
@@ -40,7 +40,7 @@ const PROJECT_ROOT = resolve(dirname(import.meta.dir));
 function banner() {
   console.log(`
 ${CYAN}╔══════════════════════════════════════════════════════════╗${NC}
-${CYAN}║${NC}  ${BOLD}claude-buddy${NC} — permanent coding companion              ${CYAN}║${NC}
+${CYAN}║${NC}  ${BOLD}claude-punk${NC} — BitmapPunks companion for Claude Code     ${CYAN}║${NC}
 ${CYAN}║${NC}  ${DIM}MCP + Skill + StatusLine + Hooks${NC}                        ${CYAN}║${NC}
 ${CYAN}╚══════════════════════════════════════════════════════════╝${NC}
 `);
@@ -126,7 +126,8 @@ function installMcp() {
 
   if (!claudeJson.mcpServers) claudeJson.mcpServers = {};
 
-  claudeJson.mcpServers["claude-buddy"] = {
+  delete claudeJson.mcpServers["claude-buddy"];
+  claudeJson.mcpServers["claude-punk"] = {
     command: "bun",
     args: [toUnixPath(serverPath)],
     cwd: toUnixPath(PROJECT_ROOT),
@@ -194,7 +195,7 @@ function installHooks(settings: Record<string, any>) {
   // plus file-type specific reactions on Write/Edit.
   if (!settings.hooks.PostToolUse) settings.hooks.PostToolUse = [];
   settings.hooks.PostToolUse = settings.hooks.PostToolUse.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => (hh.command?.includes("claude-buddy") || hh.command?.includes("claude-punk"))),
   );
   settings.hooks.PostToolUse.push({
     matcher: "Bash",
@@ -208,7 +209,7 @@ function installHooks(settings: Record<string, any>) {
   // Stop: extract <!-- buddy: --> comment from Claude's response
   if (!settings.hooks.Stop) settings.hooks.Stop = [];
   settings.hooks.Stop = settings.hooks.Stop.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => (hh.command?.includes("claude-buddy") || hh.command?.includes("claude-punk"))),
   );
   settings.hooks.Stop.push({
     hooks: [{ type: "command", command: toUnixPath(commentHook) }],
@@ -218,7 +219,7 @@ function installHooks(settings: Record<string, any>) {
   // reaction, plus mood-react based on prompt content.
   if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
   settings.hooks.UserPromptSubmit = settings.hooks.UserPromptSubmit.filter(
-    (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+    (h: any) => !h.hooks?.some((hh: any) => (hh.command?.includes("claude-buddy") || hh.command?.includes("claude-punk"))),
   );
   settings.hooks.UserPromptSubmit.push({
     hooks: [{ type: "command", command: toUnixPath(nameHook) }],
@@ -237,9 +238,9 @@ function ensurePermissions(settings: Record<string, any>) {
   if (!settings.permissions.allow) settings.permissions.allow = [];
 
   const allow: string[] = settings.permissions.allow;
-  if (!allow.includes("mcp__*") && !allow.some((p: string) => p.startsWith("mcp__claude_buddy"))) {
-    allow.push("mcp__claude_buddy__*");
-    ok("Permission added: mcp__claude_buddy__*");
+  if (!allow.includes("mcp__*") && !allow.some((p: string) => p.startsWith("mcp__claude_punk"))) {
+    allow.push("mcp__claude_punk__*");
+    ok("Permission added: mcp__claude_punk__*");
   } else {
     ok("MCP permissions already configured");
   }
@@ -250,7 +251,7 @@ function ensurePermissions(settings: Record<string, any>) {
 function initCompanion() {
   let companion = loadCompanion();
   if (companion) {
-    info(`Existing companion found: ${companion.name} (${companion.bones.rarity} ${companion.bones.species})`);
+    info(`Existing Claude Punk pet found: ${companion.name} (${companion.bones.rarity})`);
     return companion;
   }
 
@@ -290,7 +291,7 @@ if (!preflight()) {
 }
 
 console.log("");
-info("Installing claude-buddy...\n");
+info("Installing claude-punk...\n");
 
 const settings = loadSettings();
 
@@ -315,11 +316,12 @@ console.log("");
 
 console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
 console.log(`${GREEN}  Done! Restart Claude Code and type /buddy${NC}`);
+console.log(`${DIM}  Claude Punk by bitmappunks, built on 1270011/claude-buddy.${NC}`);
 console.log(`${GREEN}  Display mode: status line${NC}`);
 console.log(`${GREEN}  Your companion is now permanent -- survives any update.${NC}`);
 console.log(`${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}`);
 console.log("");
-console.log(`${DIM}  /buddy        show your companion`);
+console.log(`${DIM}  /buddy        show your Claude Punk pet`);
 console.log(`  /buddy pet    pet your companion`);
 console.log(`  /buddy stats  detailed stat card`);
 console.log(`  /buddy off    mute reactions`);

@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * cli/pick.ts — interactive two-pane buddy picker
+ * cli/pick.ts — interactive two-pane Claude Punk pet picker
  *
  *  Left pane                    │  Right pane
  *  ─────────────────────────    │  ──────────────────────
@@ -291,7 +291,7 @@ function namingPane(s: State): string[] {
   const b   = s.pendingResult?.bones;
   const clr = b ? (RARITY_CLR[b.rarity] ?? "") : "";
   const lines: string[] = [];
-  lines.push(`${B}  Name this buddy${N}`);
+  lines.push(`${B}  Name this pet${N}`);
   if (b) lines.push(`  ${clr}${b.rarity} ${b.species}${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
   lines.push(`  ${B}Name:${N} ${s.nameInput}${YL}▌${N}`);
@@ -352,7 +352,7 @@ function drawScreen(s: State): void {
   let out = "\x1b[2J\x1b[H"; // clear + home
 
   // Title bar
-  const title    = ` claude-buddy pick `;
+  const title    = ` claude-punk pick `;
   const fill     = "─".repeat(Math.max(0, cols - title.length - 2));
   out += `${CY}─${B}${title}${N}${CY}${fill}─${N}\n`;
 

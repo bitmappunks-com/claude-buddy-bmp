@@ -1,39 +1,41 @@
 {
-    "name": "claude-buddy",
+    "name": "claude-punk",
     "owner": {
-        "name": "1270011"
+        "name": "bitmappunks"
     },
     "metadata": {
-        "description": "Permanent coding companion for Claude Code (requires bun: https://bun.sh/install)",
-        "version": "0.3.0"
+        "description": "BitmapPunks-powered Claude Code companion by bitmappunks. Built on top of 1270011/claude-buddy. Requires bun: https://bun.sh/install",
+        "version": "0.5.2"
     },
     "plugins": [
         {
-            "name": "claude-buddy",
+            "name": "claude-punk",
             "source": "./",
-            "description": "Permanent coding companion for Claude Code \u2014 survives any update. MCP-based terminal pet with ASCII art, stats, reactions, and personality. Requires bun runtime (https://bun.sh/install).",
-            "version": "0.3.0",
+            "description": "BitmapPunks-powered Claude Code companion by bitmappunks: pet-scoped BASE avatars, automatic ITEM animations, statusline reactions, MCP tools, and /buddy compatibility. Built on top of https://github.com/1270011/claude-buddy. Requires bun runtime (https://bun.sh/install).",
+            "version": "0.5.2",
             "author": {
-                "name": "1270011"
+                "name": "bitmappunks"
             },
-            "homepage": "https://github.com/1270011/claude-buddy#readme",
-            "repository": "https://github.com/1270011/claude-buddy",
+            "homepage": "https://github.com/bitmappunks-com/claude-buddy-bmp#readme",
+            "repository": "https://github.com/bitmappunks-com/claude-buddy-bmp",
             "license": "MIT",
             "keywords": [
                 "claude-code",
-                "buddy",
-                "companion",
+                "claude-punk",
+                "bitmappunks",
+                "bitmap-punks",
                 "mcp",
                 "terminal-pet",
-                "tamagotchi"
+                "statusline"
             ],
             "category": "companion",
             "tags": [
-                "buddy",
+                "claude-punk",
+                "bitmappunks",
+                "bitmap-punks",
                 "companion",
                 "mcp",
-                "terminal-pet",
-                "tamagotchi"
+                "terminal-pet"
             ]
         }
     ]

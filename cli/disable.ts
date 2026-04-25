@@ -1,11 +1,11 @@
 #!/usr/bin/env bun
 /**
- * claude-buddy disable — temporarily deactivate buddy without losing data
+ * claude-punk disable — temporarily deactivate Claude Punk without losing data
  *
  * Removes: MCP server, status line, hooks
- * Keeps: companion data, backups, skill files
+ * Keeps: pet data, backups, skill files
  *
- * Re-enable with: bun run install-buddy
+ * Re-enable with: bun run install-punk
  */
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
@@ -28,12 +28,13 @@ const CLAUDE_JSON = claudeUserConfigPath();
 const SETTINGS = claudeSettingsPath();
 const STATE_DIR = buddyStateDir();
 
-console.log(`\n${BOLD}Disabling claude-buddy...${NC}\n`);
+console.log(`\n${BOLD}Disabling claude-punk...${NC}\n`);
 
 // 1. Remove MCP server from ~/.claude.json
 try {
   const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON, "utf8"));
-  if (claudeJson.mcpServers?.["claude-buddy"]) {
+  if ((claudeJson.mcpServers?.["claude-punk"] || claudeJson.mcpServers?.["claude-buddy"])) {
+    delete claudeJson.mcpServers["claude-punk"];
     delete claudeJson.mcpServers["claude-buddy"];
     if (Object.keys(claudeJson.mcpServers).length === 0) delete claudeJson.mcpServers;
     writeFileSync(CLAUDE_JSON, JSON.stringify(claudeJson, null, 2));
@@ -61,7 +62,7 @@ try {
       if (settings.hooks[hookType]) {
         const before = settings.hooks[hookType].length;
         settings.hooks[hookType] = settings.hooks[hookType].filter(
-          (h: any) => !h.hooks?.some((hh: any) => hh.command?.includes("claude-buddy")),
+          (h: any) => !h.hooks?.some((hh: any) => (hh.command?.includes("claude-buddy") || hh.command?.includes("claude-punk"))),
         );
         if (settings.hooks[hookType].length < before) changed = true;
         if (settings.hooks[hookType].length === 0) delete settings.hooks[hookType];
@@ -88,10 +89,10 @@ try {
 
 console.log(`
 ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}
-${GREEN}  Buddy disabled.${NC}
-${GREEN}  Companion data is preserved at ${STATE_DIR}${NC}
+${GREEN}  Claude Punk disabled.${NC}
+${GREEN}  Pet data is preserved at ${STATE_DIR}${NC}
 ${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}
 
 ${DIM}  Restart Claude Code for changes to take effect.
-  Re-enable anytime with: bun run install-buddy${NC}
+  Re-enable anytime with: bun run install-punk${NC}
 `);

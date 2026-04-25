@@ -1,17 +1,17 @@
 ---
 name: buddy
-description: "Show, pet, or manage your coding companion. Use when the user types /buddy or mentions their companion by name."
+description: "Show, pet, or manage the user's Claude Punk / BitmapPunks companion. Use when the user types /buddy or mentions their pet by name."
 argument-hint: "[show|pet|stats|help|off|on|rename <name>|personality <text>|achievements|summon [slot]|save [slot]|list|dismiss <slot>|pick|frequency [seconds]|style [classic|round]|position [top|left]|rarity [on|off]|rainbow [#hex ...]|statusline [on|off]|uninstall]"
-allowed-tools: mcp__claude_buddy__*, Bash
+allowed-tools: mcp__claude_punk__*, mcp__claude_buddy__*, Bash
 ---
 
-# Buddy — Your Coding Companion
+# Claude Punk — BitmapPunks Companion
 
-Handle the user's `/buddy` command using the claude-buddy MCP tools.
+Handle the user's `/buddy` command using the Claude Punk MCP tools.
 
 ## Fallback: MCP Tools Unavailable
 
-**Before routing any command, check whether `mcp__claude_buddy__*` tools are registered in this session.** If they are NOT — Claude Code was unable to start the claude-buddy MCP server — do not attempt to call any buddy tool. The tool calls will fail with an unhelpful "tool not found" error. Instead, run this diagnostic and report the result to the user so they can fix the underlying cause:
+**Before routing any command, check whether `mcp__claude_punk__*` or legacy `mcp__claude_buddy__*` tools are registered in this session.** If they are NOT — Claude Code was unable to start the Claude Punk MCP server — do not attempt to call any buddy tool. The tool calls will fail with an unhelpful "tool not found" error. Instead, run this diagnostic and report the result to the user so they can fix the underlying cause:
 
 1. Check bun availability:
    ```bash
@@ -21,13 +21,13 @@ Handle the user's `/buddy` command using the claude-buddy MCP tools.
 
 2. If bun IS present, run the launcher directly to capture whatever error it emits. The launcher path depends on which marketplace installed the plugin; locate it first:
    ```bash
-   find ~/.claude/plugins/cache -name mcp-launcher.sh -path '*claude-buddy*' 2>/dev/null
+   find ~/.claude/plugins/cache -name mcp-launcher.sh \( -path '*claude-punk*' -o -path '*claude-buddy*' \) 2>/dev/null
    ```
    Then execute the first result with stdin closed so it exits cleanly:
    ```bash
    <launcher-path> < /dev/null; echo "exit=$?"
    ```
-   Report the stdout/stderr and exit code verbatim. Common causes: missing `bun`, corrupted plugin cache (suggest `claude plugin uninstall claude-buddy@claude-buddy && claude plugin install claude-buddy@claude-buddy`), or a `bun`-level error loading `server/index.ts`.
+   Report the stdout/stderr and exit code verbatim. Common causes: missing `bun`, corrupted plugin cache (suggest `claude plugin uninstall claude-punk@claude-punk && claude plugin install claude-punk@claude-punk`), or a `bun`-level error loading `server/index.ts`.
 
 3. If `$CLAUDE_CONFIG_DIR` is set in the environment, use that directory instead of `~/.claude` when searching for the launcher.
 
@@ -53,7 +53,7 @@ Based on `$ARGUMENTS`:
 | `save [slot]`            | Call `buddy_save` with optional slot name                                                    |
 | `list`                   | Call `buddy_list`                                                                            |
 | `dismiss <slot>`         | Call `buddy_dismiss` with the slot name                                                      |
-| `pick`                   | Tell user to run `! bun run pick` from the claude-buddy directory (launches interactive TUI) |
+| `pick`                   | Tell user to run `! bun run pick` from the Claude Punk directory (launches interactive TUI) |
 | `frequency`              | Call `buddy_frequency` with no args (show current)                                           |
 | `frequency <seconds>`    | Call `buddy_frequency` with cooldown=seconds                                                 |
 | `style`                  | Call `buddy_style` with no args (show current)                                               |
@@ -74,29 +74,29 @@ Based on `$ARGUMENTS`:
 
 ## CRITICAL OUTPUT RULES
 
-The MCP tools return pre-formatted ASCII art with ANSI colors, box-drawing characters, stat bars, and species art. This is the companion's visual identity.
+The MCP tools return pre-formatted BitmapPunks terminal art with ANSI colors, box-drawing characters, and stat bars. This is the pet's visual identity.
 
 **You MUST output the tool result text EXACTLY as returned — character for character, line for line.** Do NOT:
 
-- Summarize or paraphrase the ASCII art
+- Summarize or paraphrase the terminal art
 - Describe what the companion looks like in prose
 - Add commentary before or after the card
 - Reformat, rephrase, or interpret the output
 - Strip ANSI escape codes
 
-**Just output the raw text content from the tool result. Nothing else.** The ASCII art IS the response.
+**Just output the raw text content from the tool result. Nothing else.** The terminal art IS the response.
 
-If the user mentions the buddy's name in normal conversation, call `buddy_react` with reason "turn" and display the result verbatim.
+If the user mentions the pet's name in normal conversation, call `buddy_react` with reason "turn" and display the result verbatim.
 
 ## Uninstall Orchestration
 
 When the user invokes `/buddy uninstall`, run this sequence **in order** — do not skip steps, do not ask for confirmation between steps:
 
 1. Call the MCP tool `buddy_uninstall`. Display its output verbatim.
-2. Run via Bash tool: `claude plugin uninstall claude-buddy@claude-buddy`
-3. Run via Bash tool: `claude plugin marketplace remove claude-buddy`
-4. Run via Bash tool: `rm -rf ~/.claude/plugins/cache/claude-buddy`
-5. Tell the user: uninstall is complete; companion data is kept at `~/.claude-buddy/`; restart Claude Code to release the plugin.
+2. Run via Bash tool: `claude plugin uninstall claude-punk@claude-punk`
+3. Run via Bash tool: `claude plugin marketplace remove claude-punk`
+4. Run via Bash tool: `rm -rf ~/.claude/plugins/cache/claude-punk ~/.claude/plugins/cache/claude-buddy`
+5. Tell the user: uninstall is complete; companion data is kept at `~/.claude-buddy/` for compatibility; restart Claude Code to release the plugin.
 
 If any Bash step fails (non-zero exit), report the error but continue with the remaining steps — each step is independent and always-safe to run.
 

@@ -1069,8 +1069,9 @@ function disableBuddy(): DisableResult {
 
   try {
     const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON_PATH, "utf8"));
-    if (claudeJson.mcpServers?.["claude-buddy"]) {
-      delete claudeJson.mcpServers["claude-buddy"];
+    if ((claudeJson.mcpServers?.["claude-punk"] || claudeJson.mcpServers?.["claude-buddy"])) {
+      delete claudeJson.mcpServers["claude-punk"];
+    delete claudeJson.mcpServers["claude-buddy"];
       if (Object.keys(claudeJson.mcpServers).length === 0) delete claudeJson.mcpServers;
       writeFileSync(CLAUDE_JSON_PATH, JSON.stringify(claudeJson, null, 2));
       ok.push("MCP server removed");

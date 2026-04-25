@@ -163,9 +163,10 @@ if (settings?.hooks) {
   warn("No hooks configured");
 }
 
-if (claudeJson?.mcpServers?.["claude-buddy"]) {
+const mcpEntry = claudeJson?.mcpServers?.["claude-punk"] ?? claudeJson?.mcpServers?.["claude-buddy"];
+if (mcpEntry) {
   ok(`MCP server registered in ${CLAUDE_JSON}`);
-  console.log(`    ${JSON.stringify(claudeJson.mcpServers["claude-buddy"], null, 2).split("\n").join("\n    ")}`);
+  console.log(`    ${JSON.stringify(mcpEntry, null, 2).split("\n").join("\n    ")}`);
 } else {
   err(`MCP server NOT registered in ${CLAUDE_JSON}`);
 }
