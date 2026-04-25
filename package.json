@@ -52,9 +52,9 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/bitmappunks-com/claude-buddy-bmp.git"
+    "url": "https://github.com/bitmappunks-com/claude-punk.git"
   },
-  "homepage": "https://github.com/bitmappunks-com/claude-buddy-bmp#readme",
+  "homepage": "https://github.com/bitmappunks-com/claude-punk#readme",
   "license": "MIT",
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",

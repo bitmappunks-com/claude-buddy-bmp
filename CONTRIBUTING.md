@@ -7,7 +7,7 @@ This repository is adapted from [1270011/claude-buddy](https://github.com/127001
 ## Quick Setup
 
 ```bash
-git clone https://github.com/bitmappunks-com/claude-buddy-bmp.git claude-punk
+git clone https://github.com/bitmappunks-com/claude-punk.git claude-punk
 cd claude-punk
 bun install
 bun run install-punk
