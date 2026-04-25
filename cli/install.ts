@@ -11,7 +11,9 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, cpSync } from "fs";
 import { execSync } from "child_process";
 import { resolve, dirname, join } from "path";
 
-import { generateBones, renderBuddy, renderFace, RARITY_STARS } from "../server/engine.ts";
+import { generateBones } from "../server/engine.ts";
+import type { Companion } from "../server/engine.ts";
+import { renderCompanionCard } from "../server/art.ts";
 import {
   claudeConfigDir,
   claudeSettingsPath,
@@ -21,7 +23,7 @@ import {
 } from "../server/path.ts";
 import { loadCompanion, saveCompanion, resolveUserId, writeStatusState } from "../server/state.ts";
 import { generateFallbackName } from "../server/reactions.ts";
-import { pickBitmapBaseForSeed } from "../server/bitmappunk-avatar.ts";
+import { bitmapBaseLabelForKey, pickBitmapBaseForSeed } from "../server/bitmappunk-avatar.ts";
 
 const CYAN = "\x1b[36m";
 const GREEN = "\x1b[32m";
@@ -251,7 +253,7 @@ function ensurePermissions(settings: Record<string, any>) {
 function initCompanion() {
   let companion = loadCompanion();
   if (companion) {
-    info(`Existing Claude Punk pet found: ${companion.name} (${companion.bones.rarity})`);
+    info(`Existing Claude Punk pet found: ${companion.name} (${companion.bones.rarity} ${bitmapBaseLabelForKey(companion.bitmapBase)})`);
     return companion;
   }
 
@@ -262,7 +264,7 @@ function initCompanion() {
   companion = {
     bones,
     name: generateFallbackName(),
-    personality: `A ${bones.rarity} ${bones.species} who watches code with quiet intensity.`,
+    personality: `A ${bones.rarity} companion who watches code with quiet intensity.`,
     hatchedAt: Date.now(),
     userId,
     bitmapBase: pickBitmapBaseForSeed(`install:${userId}`),
@@ -309,7 +311,15 @@ console.log("");
 const companion = initCompanion();
 
 console.log("");
-console.log(renderBuddy(companion.bones));
+console.log(renderCompanionCard(
+  companion.bones,
+  companion.name,
+  companion.personality,
+  undefined,
+  0,
+  40,
+  companion.bitmapBase,
+));
 console.log("");
 console.log(`  ${BOLD}${companion.name}${NC} -- ${companion.personality}`);
 console.log("");

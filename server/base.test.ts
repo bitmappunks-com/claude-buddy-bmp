@@ -1,7 +1,9 @@
 import { describe, test, expect } from "bun:test";
 import { mkdtempSync, readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
 import { tmpdir } from "os";
+import { bitmapBaseLabelForKey } from "./bitmappunk-avatar.ts";
+import { renderCompanionCard } from "./art.ts";
 
 describe("BitmapPunks base UX", () => {
   test("removes the direct base command interface", () => {
@@ -89,6 +91,47 @@ describe("BitmapPunks base UX", () => {
     expect(status.rarity).toBe(hunted.bones.rarity);
     expect(status.species).toBe(hunted.bones.species);
     expect(status.hat).toBe(hunted.bones.hat);
+  });
+
+  test("installer prints the installed pet's BitmapPunks base card and species-free setup", () => {
+    const profileDir = mkdtempSync(join(tmpdir(), "buddy-install-base-card-"));
+    mkdirSync(profileDir, { recursive: true });
+    writeFileSync(join(profileDir, ".claude.json"), JSON.stringify({ userID: "install-base-card-user" }));
+
+    const proc = Bun.spawnSync({
+      cmd: [process.execPath, "run", "install-buddy"],
+      cwd: join(import.meta.dir, ".."),
+      env: {
+        ...process.env,
+        PATH: `${dirname(process.execPath)}:${process.env.PATH ?? ""}`,
+        CLAUDE_CONFIG_DIR: profileDir,
+      },
+      stderr: "pipe",
+      stdout: "pipe",
+    });
+
+    expect(proc.exitCode).toBe(0);
+    const output = Buffer.from(proc.stdout).toString("utf8");
+    const manifest = JSON.parse(readFileSync(join(profileDir, "buddy-state", "menagerie.json"), "utf8"));
+    const companion = manifest.companions[manifest.active];
+    expect(companion.bitmapBase).toEqual(expect.any(String));
+
+    const baseLabel = bitmapBaseLabelForKey(companion.bitmapBase);
+    expect(output).toContain(baseLabel);
+    expect(output).toContain(renderCompanionCard(
+      companion.bones,
+      companion.name,
+      companion.personality,
+      undefined,
+      0,
+      40,
+      companion.bitmapBase,
+    ));
+    expect(output).toContain(`A ${companion.bones.rarity} companion who watches code with quiet intensity.`);
+    expect(output).not.toContain(`A ${companion.bones.rarity} ${companion.bones.species} who watches code`);
+    expect(output).not.toContain("eye:");
+    expect(output).not.toContain("hat:");
+    expect(output).not.toContain(companion.bitmapBase);
   });
 
   test("hunt prompts for an exact look when a gender/type pair maps to multiple bases", () => {
