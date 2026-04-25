@@ -3,6 +3,7 @@
  * Matches Claude Code's exact algorithm: wyhash → mulberry32 → species/stats
  */
 
+
 export const SALT = "friend-2026-401";
 
 export const SPECIES = [
@@ -129,6 +130,8 @@ export interface Companion {
   personality: string;
   hatchedAt: number;
   userId: string;
+  /** Canonical BitmapPunks BASE key for this companion's visual identity. */
+  bitmapBase?: string;
 }
 
 // ─── Hash: wyhash via Bun.hash, pure JS fallback ───────────────────────────
@@ -372,7 +375,7 @@ export function generatePersonality(bones: BuddyBones, userId: string): string {
   const dump   = pickPhrase(DUMP_PHRASES[bones.dump], 1);
   const closer = pickPhrase(RARITY_CLOSER[bones.rarity] ?? ["Gets the job done."], 2);
 
-  return `A ${bones.rarity} ${bones.species} that ${peak}.${shiny} ${closer} Though it ${dump}.`;
+  return `A ${bones.rarity} companion that ${peak}.${shiny} ${closer} Though it ${dump}.`;
 }
 
 // ─── ASCII Art ──────────────────────────────────────────────────────────────
@@ -399,19 +402,18 @@ const FACE_TEMPLATES: Record<Species, string> = {
   wyvern: "\\ {E}' '{E} /",
 };
 
-export function renderFace(species: Species, eye: Eye): string {
-  return FACE_TEMPLATES[species].replace(/\{E\}/g, eye);
+export function renderFace(_species: Species, eye: Eye): string {
+  return `▣${eye}▣`;
 }
 
 export function renderBuddy(bones: BuddyBones): string {
-  const face = renderFace(bones.species, bones.eye);
-  const hat = HAT_ART[bones.hat];
+  const { getArtFrame } = require("./art.ts") as typeof import("./art.ts");
+  const art = getArtFrame(bones.species, bones.eye, 0);
   const shiny = bones.shiny ? "\u2728 " : "";
   const stars = RARITY_STARS[bones.rarity];
 
   const lines: string[] = [];
-  if (hat) lines.push(hat);
-  lines.push(`  ${face}`);
+  lines.push(...art);
   lines.push("");
   lines.push(`${shiny}${bones.rarity} ${bones.species} ${stars}`);
   lines.push("");

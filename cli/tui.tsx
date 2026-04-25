@@ -94,24 +94,12 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   {
     key: "achievements", icon: "🏆", label: "Achievements",
     description: [
-      "View all 16 milestone badges you can",
-      "unlock with your buddy — pets, coding",
-      "streaks, errors witnessed, and more.",
+      "View all achievement badges you can",
+      "unlock with your buddy — coding",
+      "streaks, reactions, recoveries, and more.",
       "",
       "Locked badges show a progress bar;",
-      "3 secret ones stay hidden until earned.",
-    ],
-  },
-  {
-    key: "hunt", icon: "🎯", label: "Hunt",
-    description: [
-      "Brute-force search for a specific buddy.",
-      "",
-      "Choose species, rarity, shiny flag, peak",
-      "and dump stats — then start hunting.",
-      "",
-      "Legendary + shiny may take many minutes.",
-      "Pick from results, name and save.",
+      "secret ones stay hidden until earned.",
     ],
   },
   {
@@ -1081,8 +1069,9 @@ function disableBuddy(): DisableResult {
 
   try {
     const claudeJson = JSON.parse(readFileSync(CLAUDE_JSON_PATH, "utf8"));
-    if (claudeJson.mcpServers?.["claude-buddy"]) {
-      delete claudeJson.mcpServers["claude-buddy"];
+    if ((claudeJson.mcpServers?.["claude-punk"] || claudeJson.mcpServers?.["claude-buddy"])) {
+      delete claudeJson.mcpServers["claude-punk"];
+    delete claudeJson.mcpServers["claude-buddy"];
       if (Object.keys(claudeJson.mcpServers).length === 0) delete claudeJson.mcpServers;
       writeFileSync(CLAUDE_JSON_PATH, JSON.stringify(claudeJson, null, 2));
       ok.push("MCP server removed");

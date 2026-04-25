@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "claude-buddy",
+      "name": "claude-punk",
       "dependencies": {
         "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
         "@modelcontextprotocol/sdk": "^1.12.1",

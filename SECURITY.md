@@ -1,29 +1,39 @@
 # Security Policy
 
-## Scope
+Claude Punk runs locally on your machine. It consists of:
 
-claude-buddy runs locally on your machine. It consists of:
-- An MCP server (stdio, local only — no network listeners)
-- Shell scripts for status line and hooks
-- State files in `~/.claude-buddy/`
+- A Claude Code MCP server launched over stdio
+- A `/buddy` skill for compatibility with existing Claude Code workflows
+- Shell hooks that write local reaction/status files
+- Statusline scripts that read local state
+- State files under `~/.claude-buddy/` or profile-scoped `buddy-state/`
 
-It does **not** make external network requests, collect telemetry, or transmit any data.
+Claude Punk is authored by **bitmappunks** and is built on top of [1270011/claude-buddy](https://github.com/1270011/claude-buddy).
 
 ## Reporting a Vulnerability
 
-If you find a security issue, please **do not** open a public GitHub issue.
+Please do not open a public issue for sensitive reports. Send a private report to the repository owner/maintainer for this fork.
 
-Instead, email: **85120225+1270011@users.noreply.github.com**
+Useful details:
 
-I'll respond within 48 hours and work with you on a fix before any public disclosure.
+- OS and shell
+- Claude Code version
+- Bun version
+- Install method
+- Redacted `~/.claude.json` / `settings.json` snippets if relevant
+- Steps to reproduce
 
-## What to Report
+## Scope
 
-- Shell injection risks in hooks or status line scripts
-- File permission issues with state files
-- Anything that could leak data from `~/.claude.json` or `~/.claude-buddy/`
+Security-sensitive areas include:
 
-## What's Not in Scope
+- MCP server startup and plugin manifests
+- Shell hooks and statusline scripts
+- State path resolution and profile isolation
+- Anything that could leak data from Claude Code config or Claude Punk state
 
-- Claude Code's own security (report to Anthropic)
-- Cosmetic issues (use a regular bug report)
+## Non-goals
+
+- Cosmetic rendering issues
+- Normal local state files created by the app
+- Bugs that require a user to run arbitrary untrusted commands manually

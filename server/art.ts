@@ -6,125 +6,33 @@
  * {E} is replaced with the eye character at render time.
  */
 
-import type { Species, Eye, Hat, Rarity, StatName, BuddyBones } from "./engine.ts";
+import { type Species, type Eye, type Hat, type Rarity, type StatName, type BuddyBones } from "./engine.ts";
+import { buildBitmapStatusArt, DEFAULT_BITMAP_BASE, bitmapBaseLabelForKey, resolveBitmapBaseSelection } from "./bitmappunk-avatar.ts";
+import { loadReaction } from "./state.ts";
 
-// ─── Species art: 3 frames × 5 lines each ──────────────────────────────────
+function currentBitmapBase(requestedBase?: string): string {
+  try {
+    return resolveBitmapBaseSelection(requestedBase ?? DEFAULT_BITMAP_BASE);
+  } catch {
+    return DEFAULT_BITMAP_BASE;
+  }
+}
 
-export const SPECIES_ART: Record<Species, string[][]> = {
-  duck: [
-    ["            ", "    __      ", "  <({E} )___  ", "   (  ._>   ", "    `--'    "],
-    ["            ", "    __      ", "  <({E} )___  ", "   (  ._>   ", "    `--'~   "],
-    ["            ", "    __      ", "  <({E} )___  ", "   (  .__>  ", "    `--'    "],
-  ],
-  goose: [
-    ["            ", "     ({E}>    ", "     ||     ", "   _(__)_   ", "    ^^^^    "],
-    ["            ", "    ({E}>     ", "     ||     ", "   _(__)_   ", "    ^^^^    "],
-    ["            ", "     ({E}>>   ", "     ||     ", "   _(__)_   ", "    ^^^^    "],
-  ],
-  blob: [
-    ["            ", "   .----.   ", "  ( {E}  {E} )  ", "  (      )  ", "   `----'   "],
-    ["            ", "  .------.  ", " (  {E}  {E}  ) ", " (        ) ", "  `------'  "],
-    ["            ", "    .--.    ", "   ({E}  {E})   ", "   (    )   ", "    `--'    "],
-  ],
-  cat: [
-    ["            ", "   /\\_/\\    ", "  ( {E}   {E})  ", "  (  \u03c9  )   ", "  (\")_(\")   "],
-    ["            ", "   /\\_/\\    ", "  ( {E}   {E})  ", "  (  \u03c9  )   ", "  (\")_(\")~  "],
-    ["            ", "   /\\-/\\    ", "  ( {E}   {E})  ", "  (  \u03c9  )   ", "  (\")_(\")   "],
-  ],
-  dragon: [
-    ["            ", "  /^\\  /^\\  ", " <  {E}  {E}  > ", " (   ~~   ) ", "  `-vvvv-'  "],
-    ["            ", "  /^\\  /^\\  ", " <  {E}  {E}  > ", " (        ) ", "  `-vvvv-'  "],
-    ["   ~    ~   ", "  /^\\  /^\\  ", " <  {E}  {E}  > ", " (   ~~   ) ", "  `-vvvv-'  "],
-  ],
-  octopus: [
-    ["            ", "   .----.   ", "  ( {E}  {E} )  ", "  (______)  ", "  /\\/\\/\\/\\  "],
-    ["            ", "   .----.   ", "  ( {E}  {E} )  ", "  (______)  ", "  \\/\\/\\/\\/  "],
-    ["     o      ", "   .----.   ", "  ( {E}  {E} )  ", "  (______)  ", "  /\\/\\/\\/\\  "],
-  ],
-  owl: [
-    ["            ", "   /\\  /\\   ", "  (({E})({E}))  ", "  (  ><  )  ", "   `----'   "],
-    ["            ", "   /\\  /\\   ", "  (({E})({E}))  ", "  (  ><  )  ", "   .----.   "],
-    ["            ", "   /\\  /\\   ", "  (({E})(-))  ", "  (  ><  )  ", "   `----'   "],
-  ],
-  penguin: [
-    ["            ", "  .---.     ", "  ({E}>{E})     ", " /(   )\\    ", "  `---'     "],
-    ["            ", "  .---.     ", "  ({E}>{E})     ", " |(   )|    ", "  `---'     "],
-    ["  .---.     ", "  ({E}>{E})     ", " /(   )\\    ", "  `---'     ", "   ~ ~      "],
-  ],
-  turtle: [
-    ["            ", "   _,--._   ", "  ( {E}  {E} )  ", " /[______]\\ ", "  ``    ``  "],
-    ["            ", "   _,--._   ", "  ( {E}  {E} )  ", " /[______]\\ ", "   ``  ``   "],
-    ["            ", "   _,--._   ", "  ( {E}  {E} )  ", " /[======]\\ ", "  ``    ``  "],
-  ],
-  snail: [
-    ["            ", " {E}    .--.  ", "  \\  ( @ )  ", "   \\_`--'   ", "  ~~~~~~~   "],
-    ["            ", "  {E}   .--.  ", "  |  ( @ )  ", "   \\_`--'   ", "  ~~~~~~~   "],
-    ["            ", " {E}    .--.  ", "  \\  ( @  ) ", "   \\_`--'   ", "   ~~~~~~   "],
-  ],
-  ghost: [
-    ["            ", "   .----.   ", "  / {E}  {E} \\  ", "  |      |  ", "  ~`~``~`~  "],
-    ["            ", "   .----.   ", "  / {E}  {E} \\  ", "  |      |  ", "  `~`~~`~`  "],
-    ["    ~  ~    ", "   .----.   ", "  / {E}  {E} \\  ", "  |      |  ", "  ~~`~~`~~  "],
-  ],
-  axolotl: [
-    ["            ", "}~(______)~{", "}~({E} .. {E})~{", "  ( .--. )  ", "  (_/  \\_)  "],
-    ["            ", "~}(______){~", "~}({E} .. {E}){~", "  ( .--. )  ", "  (_/  \\_)  "],
-    ["            ", "}~(______)~{", "}~({E} .. {E})~{", "  (  --  )  ", "  ~_/  \\_~  "],
-  ],
-  capybara: [
-    ["            ", "  n______n  ", " ( {E}    {E} ) ", " (   oo   ) ", "  `------'  "],
-    ["            ", "  n______n  ", " ( {E}    {E} ) ", " (   Oo   ) ", "  `------'  "],
-    ["    ~  ~    ", "  u______n  ", " ( {E}    {E} ) ", " (   oo   ) ", "  `------'  "],
-  ],
-  cactus: [
-    ["            ", " n  ____  n ", " | |{E}  {E}| | ", " |_|    |_| ", "   |    |   "],
-    ["            ", "    ____    ", " n |{E}  {E}| n ", " |_|    |_| ", "   |    |   "],
-    [" n        n ", " |  ____  | ", " | |{E}  {E}| | ", " |_|    |_| ", "   |    |   "],
-  ],
-  robot: [
-    ["            ", "   .[||].   ", "  [ {E}  {E} ]  ", "  [ ==== ]  ", "  `------'  "],
-    ["            ", "   .[||].   ", "  [ {E}  {E} ]  ", "  [ -==- ]  ", "  `------'  "],
-    ["     *      ", "   .[||].   ", "  [ {E}  {E} ]  ", "  [ ==== ]  ", "  `------'  "],
-  ],
-  rabbit: [
-    ["            ", "   (\\__/)   ", "  ( {E}  {E} )  ", " =(  ..  )= ", "  (\")__(\")" ],
-    ["            ", "   (|__/)   ", "  ( {E}  {E} )  ", " =(  ..  )= ", "  (\")__(\")" ],
-    ["            ", "   (\\__/)   ", "  ( {E}  {E} )  ", " =( .  . )= ", "  (\")__(\")" ],
-  ],
-  mushroom: [
-    ["            ", " .-o-OO-o-. ", "(__________)","   |{E}  {E}|   ", "   |____|   "],
-    ["            ", " .-O-oo-O-. ", "(__________)","   |{E}  {E}|   ", "   |____|   "],
-    ["   . o  .   ", " .-o-OO-o-. ", "(__________)","   |{E}  {E}|   ", "   |____|   "],
-  ],
-  chonk: [
-    ["            ", "  /\\    /\\  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'  "],
-    ["            ", "  /\\    /|  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'  "],
-    ["            ", "  /\\    /\\  ", " ( {E}    {E} ) ", " (   ..   ) ", "  `------'~ "],
-  ],
-  wyvern: [
-    ["}       {", 
-     "|\\^```^/|",
-     "\\ {E}' '{E} /", 
-     " \\ } { /",
-     " ≈(° °)≈",
-     "   '-'"],
-    ["}       {", 
-     "|\\^```^/|",
-     "\\ {E}' '{E} /", 
-     " \\ } { /",
-     " ≈(° °)≈",
-     "  \x1b[38;2;255;120;0m//|\\\\\x1b[0m"],
-    ["}       {", 
-     "|\\^```^/|",
-     "\\ {E}' '{E} /", 
-     " \\ } { /",
-     " ≈(° °)≈",
-     "   'v'"],
-  ]
-};
+function currentBitmapReactionContext(): { reason?: string; seed: number } {
+  const reaction = loadReaction();
+  if (!reaction) {
+    return { seed: Math.floor(Date.now() / 300000) };
+  }
+  return {
+    reason: reaction.reason,
+    seed: Math.floor(reaction.timestamp / 30000),
+  };
+}
 
 // ─── Hat art ────────────────────────────────────────────────────────────────
 
+// Legacy ASCII hat art is still exported for old TUI surfaces, but BitmapPunks
+// previews must not overlay these on top of vendored BASE art.
 export const HAT_ART: Record<Hat, string> = {
   none:      "",
   crown:     "   \\^^^/    ",
@@ -135,28 +43,6 @@ export const HAT_ART: Record<Hat, string> = {
   beanie:    "   (___)    ",
   tinyduck:  "    ,>      ",
 };
-
-// Wyvern line 0 is `}       {` (7 inner chars between horns).
-// These replace that line so the hat sits between the horns.
-const WYVERN_HAT: Partial<Record<Hat, string>> = {
-  crown:     "} \\^^^/ {",  // \^^^/ (5) centered in 7
-  tophat:    "} [___] {",   // [___] (5) centered in 7
-  propeller: "}  -+-  {",   // -+- (3) centered in 7
-  halo:      "} (   ) {",   // (   ) (5) centered in 7
-  wizard:    "}  /^\\  {",  // /^\ (3) centered in 7
-  beanie:    "} (___) {",   // (___) (5) centered in 7
-  tinyduck:  "}  ,>   {",   // ,> (2) slightly left of center
-};
-
-function applyHat(species: Species, hat: Hat, art: string[]): void {
-  if (hat === "none") return;
-  if (species === "wyvern") {
-    const wyvernLine = WYVERN_HAT[hat];
-    if (wyvernLine) art[0] = wyvernLine;
-  } else if (!art[0].trim()) {
-    art[0] = HAT_ART[hat];
-  }
-}
 
 // ─── Rarity ANSI colors ────────────────────────────────────────────────────
 
@@ -233,43 +119,29 @@ function dpad(s: string, targetW: number): string {
 
 // ─── Render functions ───────────────────────────────────────────────────────
 
-export function getArtFrame(species: Species, eye: Eye, frame: number = 0): string[] {
-  const frames = SPECIES_ART[species];
-  const f = frames[frame % frames.length];
-  return f.map((line) => line.replace(/\{E\}/g, eye));
+export function getArtFrame(_species: Species, _eye: Eye, frame: number = 0, bitmapBase?: string): string[] {
+  const ctx = currentBitmapReactionContext();
+  const art = buildBitmapStatusArt(currentBitmapBase(bitmapBase), ctx.reason, ctx.seed);
+  return art.frames[frame % art.frames.length].split("\n");
 }
 
-// Original 15-tick cycle [0,0,0,0,1,0,0,0,-1,0,0,2,0,0,0]: -1 (blink) becomes
-// index 3 in the pre-baked frames array.
-export const STATUS_FRAME_SEQUENCE: readonly number[] = [
-  0, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 2, 0, 0, 0,
-];
-
-// Pre-resolves eye, hat overlay, and blink so the statusline shell does no art
-// work — it just cycles whatever frames the server writes. Each frame is a
-// \n-joined 5-line string (one jq call + mapfile in bash).
-export function getStatusFrames(bones: BuddyBones): {
+export function getStatusFrames(_bones: BuddyBones, bitmapBase?: string): {
+  bitmapBase: string;
+  bitmapItem?: string;
   frames: string[];
+  framesHalfblock: string[];
+  framesFullcell: string[];
   frameSequence: number[];
 } {
-  const resolveFrame = (frameIdx: number, eye: string): string => {
-    const raw = SPECIES_ART[bones.species][frameIdx];
-    const art = raw.map((line) => line.replace(/\{E\}/g, eye));
-    const hatLine = HAT_ART[bones.hat];
-    if (hatLine && !art[0].trim()) {
-      art[0] = hatLine;
-    }
-    return art.join("\n");
-  };
-
+  const ctx = currentBitmapReactionContext();
+  const art = buildBitmapStatusArt(currentBitmapBase(bitmapBase), ctx.reason, ctx.seed);
   return {
-    frames: [
-      resolveFrame(0, bones.eye),
-      resolveFrame(1, bones.eye),
-      resolveFrame(2, bones.eye),
-      resolveFrame(0, "-"),
-    ],
-    frameSequence: [...STATUS_FRAME_SEQUENCE],
+    bitmapBase: art.bitmapBase,
+    bitmapItem: art.bitmapItem,
+    frames: [...art.frames],
+    framesHalfblock: [...art.framesHalfblock],
+    framesFullcell: [...art.framesFullcell],
+    frameSequence: [...art.frameSequence],
   };
 }
 
@@ -280,15 +152,16 @@ export function renderCompanionCard(
   reaction?: string,
   frame: number = 0,
   width: number = 40,
+  bitmapBase?: string,
 ): string {
   const color = RARITY_COLOR[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? `${SHINY_COLOR}\u2728 ${NC}` : "";
-  const art = getArtFrame(bones.species, bones.eye, frame);
-  applyHat(bones.species, bones.hat, art);
+  const art = getArtFrame(bones.species, bones.eye, frame, bitmapBase);
+  const artWidth = art.reduce((max, line) => Math.max(max, displayWidth(line)), 0);
 
   // Build the card
-  const W = Math.max(24, width);
+  const W = Math.max(24, width, artWidth + 4);
   const hr = "\u2500".repeat(W - 2);
   const lines: string[] = [];
 
@@ -311,13 +184,10 @@ export function renderCompanionCard(
   const nameStarsRaw = `${BOLD}${name}${NC}  ${color}${stars}${NC}`;
   lines.push(`${color}\u2502${NC}  ${nameStarsRaw}${" ".repeat(Math.max(0, innerW - displayWidth(name) - 2 - displayWidth(stars)))}${color}\u2502${NC}`);
 
-  const rarityRaw = `${shiny}${color}${BOLD}${bones.rarity.toUpperCase()}${NC} ${bones.species}`;
-  const rarityVis = (bones.shiny ? 3 : 0) + bones.rarity.length + 1 + bones.species.length;
+  const baseLabel = bitmapBaseLabelForKey(bitmapBase);
+  const rarityRaw = `${shiny}${color}${BOLD}${bones.rarity.toUpperCase()}${NC} ${baseLabel}`;
+  const rarityVis = (bones.shiny ? 3 : 0) + bones.rarity.length + 1 + displayWidth(baseLabel);
   lines.push(`${color}\u2502${NC}  ${rarityRaw}${" ".repeat(Math.max(0, innerW - rarityVis))}${color}\u2502${NC}`);
-
-  // Eye + Hat info
-  const cosmeticLine = `eye: ${bones.eye}  hat: ${bones.hat}`;
-  lines.push(`${color}\u2502${NC}  ${DIM}${cosmeticLine}${NC}${" ".repeat(Math.max(0, innerW - displayWidth(cosmeticLine)))}${color}\u2502${NC}`);
 
   // Separator
   lines.push(`${color}\u251c${"╌".repeat(W - 2)}\u2524${NC}`);
@@ -390,12 +260,12 @@ export function renderCompanionCardMarkdown(
   personality: string,
   reaction?: string,
   frame: number = 0,
+  bitmapBase?: string,
 ): string {
   const dot = RARITY_DOT[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? " \u2728" : "";
-  const art = getArtFrame(bones.species, bones.eye, frame);
-  applyHat(bones.species, bones.hat, art);
+  const art = getArtFrame(bones.species, bones.eye, frame, bitmapBase);
 
   // Strip empty lines from art for cleaner rendering
   const artLines = art.filter((l) => l.trim().length > 0);
@@ -416,10 +286,11 @@ export function renderCompanionCardMarkdown(
   parts.push(`### ${dot} ${name} · \`${bones.rarity.toUpperCase()} ${bones.species}\` · ${stars}${shiny}`);
   parts.push("");
 
-  // ASCII art in a code block (preserves monospaced formatting)
-  parts.push("```");
-  parts.push(artLines.join("\n"));
-  parts.push("```");
+  const displayedBitmapBase = currentBitmapBase(bitmapBase);
+
+  // ANSI bitmap art does not render cleanly in Claude's markdown UI.
+  parts.push(`**Avatar:** BitmapPunks base \`${displayedBitmapBase}\``);
+  parts.push(artLines.length > 0 ? `_terminal preview: ${artLines.length} rows of ANSI bitmap art_` : "");
   parts.push("");
 
   // Identity line
@@ -454,8 +325,9 @@ export function renderStatusLine(
   bones: BuddyBones,
   name: string,
   reaction?: string,
+  bitmapBase?: string,
 ): string {
-  const face = SPECIES_ART[bones.species][0][2]?.replace(/\{E\}/g, bones.eye).trim() || "(?)";
+  const face = `bitmap:${currentBitmapBase(bitmapBase)}`;
   const color = RARITY_COLOR[bones.rarity];
   const stars = RARITY_STARS[bones.rarity];
   const shiny = bones.shiny ? "\u2728" : "";

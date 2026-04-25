@@ -1,23 +1,24 @@
 {
-    "name": "claude-buddy",
-    "version": "0.3.0",
-    "description": "Permanent coding companion for Claude Code \u2014 survives any update. MCP-based terminal pet with ASCII art, stats, reactions, and personality.",
+    "name": "claude-punk",
+    "version": "0.5.2",
+    "description": "BitmapPunks-powered Claude Code companion by bitmappunks. Built on top of https://github.com/1270011/claude-buddy.",
     "author": {
-        "name": "1270011"
+        "name": "bitmappunks"
     },
     "license": "MIT",
-    "repository": "https://github.com/1270011/claude-buddy",
-    "homepage": "https://github.com/1270011/claude-buddy#readme",
+    "repository": "https://github.com/bitmappunks-com/claude-buddy-bmp",
+    "homepage": "https://github.com/bitmappunks-com/claude-buddy-bmp#readme",
     "keywords": [
         "claude-code",
-        "buddy",
-        "companion",
+        "claude-punk",
+        "bitmappunks",
+        "bitmap-punks",
         "mcp",
         "terminal-pet",
-        "tamagotchi"
+        "statusline"
     ],
     "mcpServers": {
-        "claude-buddy": {
+        "claude-punk": {
             "type": "stdio",
             "command": "${CLAUDE_PLUGIN_ROOT}/server/mcp-launcher.sh",
             "args": []

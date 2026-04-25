@@ -13,6 +13,19 @@ import { join } from "path";
 
 const REPO_ROOT = join(import.meta.dir, "..");
 
+describe("shipped package metadata", () => {
+  test("package.json identifies the project as Claude Punk by bitmappunks and keeps legacy bin alias", () => {
+    const pkg = JSON.parse(readFileSync(join(REPO_ROOT, "package.json"), "utf8"));
+
+    expect(pkg.name).toBe("claude-punk");
+    expect(pkg.author).toBe("bitmappunks");
+    expect(pkg.description).toContain("BitmapPunks");
+    expect(pkg.description).toContain("1270011/claude-buddy");
+    expect(pkg.bin["claude-punk"]).toBe("./cli/index.ts");
+    expect(pkg.bin["claude-buddy"]).toBe("./cli/index.ts");
+  });
+});
+
 describe("shipped plugin manifests", () => {
   test("hooks/hooks.json: every hook command uses ${CLAUDE_PLUGIN_ROOT}", () => {
     const manifest = JSON.parse(
@@ -38,7 +51,10 @@ describe("shipped plugin manifests", () => {
     const manifest = JSON.parse(
       readFileSync(join(REPO_ROOT, ".claude-plugin", "plugin.json"), "utf8"),
     );
-    const entry = manifest.mcpServers?.["claude-buddy"];
+    expect(manifest.name).toBe("claude-punk");
+    expect(manifest.author?.name).toBe("bitmappunks");
+    expect(manifest.description).toContain("1270011/claude-buddy");
+    const entry = manifest.mcpServers?.["claude-punk"];
     expect(entry).toBeDefined();
 
     // Either the command itself is plugin-root-anchored (the launcher path),

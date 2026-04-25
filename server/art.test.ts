@@ -8,8 +8,16 @@
 import { describe, test, expect } from "bun:test";
 import { readFileSync } from "fs";
 import { join } from "path";
-import { displayWidth, getStatusFrames, STATUS_FRAME_SEQUENCE } from "./art.ts";
+import {
+  displayWidth,
+  getStatusFrames,
+  renderCompanionCard,
+  renderCompanionCardMarkdown,
+  renderStatusLine,
+} from "./art.ts";
+import { DEFAULT_BITMAP_FRAME, bitmapBaseLabelForKey, listBitmapBaseTraits } from "./bitmappunk-avatar.ts";
 import { SPECIES, type BuddyBones } from "./engine.ts";
+import { saveConfig, saveReaction } from "./state.ts";
 
 describe("displayWidth", () => {
   test("ASCII has width equal to character count", () => {
@@ -75,57 +83,152 @@ describe("getStatusFrames", () => {
     ...overrides,
   });
 
-  test("produces 4 frames and a 15-tick sequence", () => {
+  test("produces bitmap action frames and a playback sequence that includes complete item actions", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
-    expect(frames).toHaveLength(4);
-    expect(frameSequence).toEqual([...STATUS_FRAME_SEQUENCE]);
+    expect(frames.length).toBeGreaterThanOrEqual(23);
+    const itemFrames = frameSequence.filter((idx) => idx >= 7);
+    expect(itemFrames.length).toBeGreaterThan(0);
+    expect(frameSequence.every((idx) => idx >= 0 && idx < frames.length)).toBe(true);
   });
 
-  test("every species produces 4 frames, each with 5-6 lines", () => {
+  test("every species produces bitmap frames, each matching the generated avatar height", () => {
     for (const species of SPECIES) {
       const { frames } = getStatusFrames(bones({ species }));
-      expect(frames).toHaveLength(4);
+      expect(frames.length).toBeGreaterThanOrEqual(23);
       for (const body of frames) {
-        const lines = body.split("\n").length;
-        expect(lines).toBeGreaterThanOrEqual(5);
-        expect(lines).toBeLessThanOrEqual(6);
+        const lines = body.split("\n");
+        expect(lines).toHaveLength(DEFAULT_BITMAP_FRAME.length);
+        expect(body).toMatch(/\x1b\[(?:38|48);(?:2|5);/);
       }
     }
   });
 
-  test("eye is replaced in idle frames", () => {
+  test("every BitmapPunks base renders without rejecting vendored color formats", () => {
+    for (const base of listBitmapBaseTraits()) {
+      const { frames } = getStatusFrames(bones(), base.key);
+      expect(frames.length).toBeGreaterThan(0);
+      expect(frames[0]).toMatch(/\x1b\[(?:38|48);(?:2|5);/);
+    }
+  });
+
+  test("idle frames ignore eye substitutions because the implanted avatar is pre-rendered", () => {
+    const withAt = getStatusFrames(bones({ species: "capybara", eye: "@" }));
+    const withDot = getStatusFrames(bones({ species: "capybara", eye: "·" }));
+    expect(withAt.frames[0]).toBe(withDot.frames[0]);
+    expect(withAt.frames[0]).not.toContain("{E}");
+  });
+
+  test("blink frame is rendered from vendored action data and differs from the idle frame", () => {
     const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
-    expect(frames[0]).toContain("@");
-    expect(frames[0]).not.toContain("{E}");
+    expect(frames[2]).not.toBe(frames[0]);
   });
 
-  test("blink frame (index 3) replaces the configured eye with '-'", () => {
+  test("move frame is rendered from vendored action data and differs from the idle frame", () => {
     const { frames } = getStatusFrames(bones({ species: "capybara", eye: "@" }));
-    expect(frames[3]).not.toContain("@");
-    expect(frames[3]).toContain("-");
+    expect(frames[5]).not.toBe(frames[0]);
   });
 
-  test("hat overlays line 0 when the species frame has no line-0 content", () => {
-    // duck's frame 0 line 0 is blank — hat should appear there.
-    const { frames } = getStatusFrames(bones({ species: "duck", hat: "crown" }));
-    const line0 = frames[0].split("\n")[0];
-    expect(line0).toContain("\\^^^/");
+  test("hat overlays are ignored because the implanted avatar fully occupies line 0", () => {
+    const plain = getStatusFrames(bones({ species: "duck", hat: "none" }));
+    const withHat = getStatusFrames(bones({ species: "duck", hat: "crown" }));
+    expect(withHat.frames[0]).toBe(plain.frames[0]);
   });
 
-  test("hat does not override species line-0 content", () => {
-    // capybara frame 2 has ripples on line 0 — hat should not replace them.
-    const { frames } = getStatusFrames(bones({ species: "capybara", hat: "crown" }));
-    const line0 = frames[2].split("\n")[0];
-    expect(line0).not.toContain("\\^^^/");
-    expect(line0).toContain("~");
-  });
-
-  test("frame sequence references only valid frame indices", () => {
+  test("frame sequence references only valid frame indices and includes an item burst", () => {
     const { frames, frameSequence } = getStatusFrames(bones());
+    expect(frameSequence.some((idx) => idx >= 7)).toBe(true);
     for (const idx of frameSequence) {
       expect(idx).toBeGreaterThanOrEqual(0);
       expect(idx).toBeLessThan(frames.length);
     }
+  });
+
+  test("auto item mode responds to the latest buddy reaction reason", () => {
+    saveReaction("*grimaces at the traceback*", "error");
+    const errored = getStatusFrames(bones());
+    const erroredItem = errored.bitmapItem!;
+    expect(["1733-drool", "1734-drool_with_blood", "1735-drool_with_liquor", "1731-vomit_clear", "1732-vomit_rainbow"]).toContain(erroredItem);
+
+    saveReaction("*quietly celebrates*", "all-green");
+    const succeeded = getStatusFrames(bones());
+    const succeededItem = succeeded.bitmapItem!;
+    expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(succeededItem);
+    expect(succeededItem).not.toBe(erroredItem);
+  });
+
+  test("legacy explicit item config is ignored so statusline items remain automatic", () => {
+    saveConfig({ activeBitmapItem: "1-420" } as Parameters<typeof saveConfig>[0]);
+    saveReaction("*quietly celebrates*", "all-green");
+
+    const succeeded = getStatusFrames(bones());
+
+    expect(["1744-bubble_gum_large", "1749-sleep_bubble"]).toContain(succeeded.bitmapItem!);
+    expect(succeeded.bitmapItem).not.toBe("1-420");
+  });
+});
+
+describe("render metadata", () => {
+  const bones = (overrides: Partial<BuddyBones> = {}): BuddyBones => ({
+    rarity: "common",
+    species: "capybara",
+    eye: "°",
+    hat: "none",
+    shiny: false,
+    stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
+    peak: "DEBUGGING",
+    dump: "PATIENCE",
+    ...overrides,
+  });
+
+  test("terminal card shows the pet BitmapPunks base and hides legacy species/eye/hat metadata", () => {
+    const bitmapBase = "100-solana_male";
+    const card = renderCompanionCard(
+      bones({ rarity: "legendary", species: "ghost", eye: "◉", hat: "none" }),
+      "Waffle",
+      "Keeps watch.",
+      undefined,
+      0,
+      64,
+      bitmapBase,
+    );
+
+    expect(card).toContain("LEGENDARY");
+    expect(card).toContain(bitmapBaseLabelForKey(bitmapBase));
+    expect(card).not.toContain("LEGENDARY ghost");
+    expect(card).not.toContain("eye:");
+    expect(card).not.toContain("hat:");
+  });
+
+  test("terminal card does not overlay legacy ASCII hats onto BitmapPunks art", () => {
+    const card = renderCompanionCard(
+      bones({ species: "ghost", eye: "◉", hat: "halo" }),
+      "Waffle",
+      "Keeps watch.",
+      undefined,
+      0,
+      64,
+      "43-snowman_female",
+    );
+
+    expect(card).not.toContain("(   )");
+  });
+
+  test("markdown card names the active BitmapPunks base instead of the old hello seed", () => {
+    const expectedBase = getStatusFrames(bones()).bitmapBase;
+    const markdown = renderCompanionCardMarkdown(
+      bones(),
+      "buddy",
+      "Keeps a calm watch on the terminal.",
+    );
+    expect(markdown).toContain(expectedBase);
+    expect(markdown).not.toContain("seed `hello`");
+  });
+
+  test("status line marker reflects the active BitmapPunks base instead of hello", () => {
+    const expectedBase = getStatusFrames(bones()).bitmapBase;
+    const line = renderStatusLine(bones(), "buddy");
+    expect(line).toContain(`bitmap:${expectedBase}`);
+    expect(line).not.toContain("bitmap:hello");
   });
 });
 

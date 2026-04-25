@@ -1,5 +1,5 @@
 /**
- * claude-buddy show — display current companion in terminal
+ * claude-punk show — display current Claude Punk pet in terminal
  */
 
 import { renderBuddy, renderFace, RARITY_STARS } from "../server/engine.ts";
@@ -12,7 +12,7 @@ const NC = "\x1b[0m";
 const companion = loadCompanion();
 
 if (!companion) {
-  console.log("No companion found. Run 'claude-buddy install' first.");
+  console.log("No Claude Punk pet found. Run 'claude-punk install' first.");
   process.exit(1);
 }
 

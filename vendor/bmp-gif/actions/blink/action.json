@@ -1,0 +1,27 @@
+{
+  "name": "blink",
+  "description": "连续三帧：睁眼 → 闭眼 → 睁眼。闭眼时，两只眼睛各变成 2 像素宽的黑色横条（眼珠像素及其右邻像素）。",
+  "anchors": {
+    "eye_y":   { "female": 13, "male": 12 },
+    "eye_l_x": 9,
+    "eye_r_x": 14
+  },
+  "frames": [0, 1, 0],
+  "states": {
+    "0": {
+      "name": "open",
+      "description": "睁眼：无修改，保留 base 原像素",
+      "ops": []
+    },
+    "1": {
+      "name": "closed",
+      "description": "闭眼：两只眼珠及其右邻像素（共 4 像素）涂黑",
+      "ops": [
+        { "op": "set", "x": "eye_l_x",     "y": "eye_y", "color": "rgb(0, 0, 0)" },
+        { "op": "set", "x": "eye_l_x + 1", "y": "eye_y", "color": "rgb(0, 0, 0)" },
+        { "op": "set", "x": "eye_r_x",     "y": "eye_y", "color": "rgb(0, 0, 0)" },
+        { "op": "set", "x": "eye_r_x + 1", "y": "eye_y", "color": "rgb(0, 0, 0)" }
+      ]
+    }
+  }
+}

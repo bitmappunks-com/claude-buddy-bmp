@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * cli/pick.ts — interactive two-pane buddy picker
+ * cli/pick.ts — interactive two-pane Claude Punk pet picker
  *
  *  Left pane                    │  Right pane
  *  ─────────────────────────    │  ──────────────────────
@@ -17,14 +17,15 @@
 
 import {
   loadActiveSlot, saveActiveSlot, listCompanionSlots,
-  loadCompanionSlot, saveCompanionSlot, slugify, unusedName, writeStatusState,
+  loadCompanionSlot, saveCompanion, saveCompanionSlot, slugify, unusedName, writeStatusState,
 } from "../server/state.ts";
 import {
-  generateBones, generatePersonality, SPECIES, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
-  type Species, type Rarity, type StatName, type Eye, type Hat,
+  generateBones, generatePersonality, RARITIES, STAT_NAMES, RARITY_STARS, EYES, HATS,
+  type Rarity, type StatName, type Eye, type Hat,
   type BuddyBones, type Companion,
 } from "../server/engine.ts";
-import { renderCompanionCard } from "../server/art.ts";
+import { displayWidth, renderCompanionCard } from "../server/art.ts";
+import { DEFAULT_BITMAP_BASE, bitmapBaseLabelForKey, formatBitmapBaseLabel, listBitmapBaseTraits, pickBitmapBaseForSeed, resolveBitmapBaseSelection } from "../server/bitmappunk-avatar.ts";
 import { randomBytes } from "crypto";
 
 // ─── ANSI ─────────────────────────────────────────────────────────────────────
@@ -45,42 +46,34 @@ const GR = "\x1b[90m";
 const YL = "\x1b[33m";
 const GN = "\x1b[32m";
 
-function stripAnsi(s: string): string { return s.replace(/\x1b\[[^m]*m/g, ""); }
-
-// Wide characters: emojis, some Unicode symbols take 2 display columns
-function charWidth(cp: number): number {
-  // Emoji modifiers, variation selectors, ZWJ
-  if (cp >= 0xFE00 && cp <= 0xFE0F) return 0;
-  if (cp === 0x200D) return 0;
-  // Common wide ranges: CJK, emoji, fullwidth, braille, box-drawing stars etc.
-  if (cp >= 0x1F000) return 2;  // Most emoji (sparkles ✨ = U+2728 is below this)
-  if (cp === 0x2728) return 2;  // ✨ Sparkles
-  if (cp >= 0x2600 && cp <= 0x27BF) return 1;  // Misc symbols (★ ☆ etc.) — typically 1 col
-  if (cp >= 0x2500 && cp <= 0x257F) return 1;  // Box drawing
-  if (cp >= 0x2580 && cp <= 0x259F) return 1;  // Block elements (█░)
-  if (cp >= 0x3000 && cp <= 0x9FFF) return 2;  // CJK
-  if (cp >= 0xF900 && cp <= 0xFAFF) return 2;  // CJK compat
-  if (cp >= 0xFF01 && cp <= 0xFF60) return 2;  // Fullwidth
-  return 1;
-}
-
-function vlen(s: string): number {
-  const clean = stripAnsi(s);
-  let w = 0;
-  for (const ch of clean) {
-    w += charWidth(ch.codePointAt(0)!);
+function fitAnsi(s: string, w: number): string {
+  if (w <= 0) return "";
+  let out = "";
+  let used = 0;
+  let sawAnsi = false;
+  const re = /\x1b\[[^m]*m|[\s\S]/gu;
+  for (const token of s.matchAll(re)) {
+    const part = token[0];
+    if (part.startsWith("\x1b[")) {
+      sawAnsi = true;
+      out += part;
+      continue;
+    }
+    const cw = displayWidth(part);
+    if (used + cw > w) break;
+    out += part;
+    used += cw;
   }
-  return w;
+  if (sawAnsi) out += N;
+  return used < w ? out + " ".repeat(w - used) : out;
 }
 
 function rpad(s: string, w: number): string {
-  const v = vlen(s);
-  return v < w ? s + " ".repeat(w - v) : s;
+  return fitAnsi(s, w);
 }
 
 // ─── Option lists ─────────────────────────────────────────────────────────────
 
-const SP_OPTS  = ["any", ...SPECIES]    as const;
 const RA_OPTS  = ["any", ...RARITIES]   as const;
 const SH_OPTS  = ["any", "yes", "no"]   as const;
 const ST_OPTS  = ["any", ...STAT_NAMES] as const;
@@ -90,8 +83,11 @@ const MIN_OPTS = ["any", "5", "10", "15", "20", "25", "30", "35", "40", "45",
                   "50", "55", "60", "65", "70", "75", "80", "85", "90", "95"] as const;
 const AVG_OPTS = MIN_OPTS;
 
-const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
-  { label: "Species", opts: SP_OPTS  },
+const BITMAP_BASES = listBitmapBaseTraits();
+const BASE_OPTS = ["any", ...BITMAP_BASES.map((base) => base.key)] as const;
+
+const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[]; render?: (value: string) => string }> = [
+  { label: "Base   ", opts: BASE_OPTS, render: (value) => value === "any" ? "any" : bitmapBaseLabelForKey(value) },
   { label: "Rarity ", opts: RA_OPTS  },
   { label: "Shiny  ", opts: SH_OPTS  },
   { label: "Peak   ", opts: ST_OPTS  },
@@ -108,15 +104,16 @@ const CRITERIA_ROWS: Array<{ label: string; opts: readonly string[] }> = [
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
-type Mode = "saved" | "criteria" | "searching" | "results" | "naming";
+type Mode = "saved" | "base" | "criteria" | "searching" | "results" | "naming";
 interface SlotEntry   { slot: string; companion: Companion; }
-interface BuddyResult { userId: string; bones: BuddyBones; }
+interface BuddyResult { userId: string; bones: BuddyBones; bitmapBase?: string; }
 
 interface State {
   mode:          Mode;
   searching:     boolean;
   savedSlots:    SlotEntry[];
   savedCursor:   number;
+  baseCursor:    number;
   activeSlot:    string;
   criteriaFocus: number;
   ci:            number[];   // [speciesIdx, rarityIdx, shinyIdx, peakIdx, dumpIdx, eyeIdx, hatIdx, avgIdx, dbgIdx, patIdx, chaIdx, wisIdx, snkIdx]
@@ -128,12 +125,26 @@ interface State {
   message:       string;
 }
 
+function currentBitmapBaseKey(): string {
+  try {
+    const companion = loadCompanionSlot(loadActiveSlot());
+    return resolveBitmapBaseSelection(companion?.bitmapBase ?? DEFAULT_BITMAP_BASE);
+  } catch {
+    return DEFAULT_BITMAP_BASE;
+  }
+}
+
+function currentBitmapBaseIndex(): number {
+  return Math.max(0, BITMAP_BASES.findIndex((base) => base.key === currentBitmapBaseKey()));
+}
+
 function fresh(): State {
   return {
     mode:          "saved",
     searching:     false,
     savedSlots:    listCompanionSlots(),
     savedCursor:   0,
+    baseCursor:    currentBitmapBaseIndex(),
     activeSlot:    loadActiveSlot(),
     criteriaFocus: 0,
     // Default criteria: legendary, any species/shiny/peak/dump/eye/hat/avg/stats
@@ -150,10 +161,19 @@ function fresh(): State {
 // ─── Pane builders ────────────────────────────────────────────────────────────
 
 const LEFT_W = 36;
+const PREVIEW_CARD_MAX_W = 64;
+
+function rightPaneWidth(cols: number): number {
+  return Math.max(24, cols - LEFT_W - 2);
+}
+
+function previewCardWidth(cols: number): number {
+  return Math.min(rightPaneWidth(cols), PREVIEW_CARD_MAX_W);
+}
 
 function savedPane(s: State): string[] {
   const lines: string[] = [];
-  lines.push(`${B}  Your Menagerie${N}  ${GR}[s] search${N}`);
+  lines.push(`${B}  Your Menagerie${N}  ${GR}[b] base  [s] search${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
 
   if (s.savedSlots.length === 0) {
@@ -170,12 +190,34 @@ function savedPane(s: State): string[] {
     const star = RARITY_STARS[c.bones.rarity];
     const shiny = c.bones.shiny ? "✨" : "  ";
     const name  = c.name.slice(0, 11).padEnd(11);
-    const sp    = c.bones.species.slice(0, 7).padEnd(7);
-    const row   = ` ${dot} ${clr}${name}${N} ${GR}${sp}${N} ${clr}${star}${N} ${shiny}`;
+    const baseLabel = bitmapBaseLabelForKey(c.bitmapBase).slice(0, 16).padEnd(16);
+    const row   = ` ${dot} ${clr}${name}${N} ${GR}${baseLabel}${N} ${clr}${star}${N} ${shiny}`;
     lines.push(isCursor ? RV + row + N : row);
   }
 
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  return lines;
+}
+
+function basePane(s: State): string[] {
+  const lines: string[] = [];
+  const activeBase = currentBitmapBaseKey();
+  lines.push(`${B}  BitmapPunks BASE${N}`);
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  const viewH = 14;
+  const offset = Math.max(0, s.baseCursor - Math.floor(viewH / 2));
+  for (let i = offset; i < Math.min(BITMAP_BASES.length, offset + viewH); i++) {
+    const base = BITMAP_BASES[i];
+    const isActive = base.key === activeBase;
+    const isCursor = i === s.baseCursor;
+    const dot = isActive ? `${GN}●${N}` : " ";
+    const label = `${formatBitmapBaseLabel(base).slice(0, 28).padEnd(28)}`;
+    const row = ` ${dot} ${label}`;
+    lines.push(isCursor ? RV + row + N : row);
+  }
+  lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
+  lines.push(`  ${GR}enter applies visual base only${N}`);
+  lines.push(`  ${GR}name/stats/eye/hat unchanged${N}`);
   return lines;
 }
 
@@ -185,14 +227,17 @@ function criteriaPane(s: State): string[] {
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
 
   for (let i = 0; i < CRITERIA_ROWS.length; i++) {
-    const { label, opts } = CRITERIA_ROWS[i];
+    const row = CRITERIA_ROWS[i];
+    const { label, opts } = row;
     const val     = opts[s.ci[i]];
     const focus   = i === s.criteriaFocus;
     const clr     = RARITY_CLR[val] ?? "";
     const arrow   = focus ? `${YL}>${N}` : " ";
+    const rendered = row.render?.(val) ?? val;
+    const display = rendered.length > 11 ? rendered.slice(0, 11) : rendered.padEnd(11);
     const valDisp = focus
-      ? `${RV}${B} ${val.padEnd(11)} ${N}`
-      : `${D}${clr} ${val.padEnd(11)} ${N}`;
+      ? `${RV}${B} ${display} ${N}`
+      : `${D}${clr} ${display} ${N}`;
     lines.push(`  ${arrow} ${GR}${label}${N}  ${valDisp}  ${GR}←→${N}`);
   }
 
@@ -230,7 +275,8 @@ function resultsPane(s: State): string[] {
     const star   = RARITY_STARS[b.rarity];
     const shiny  = b.shiny ? "✨" : "  ";
     const ra     = b.rarity.slice(0, 3);
-    const sp     = b.species.padEnd(8);
+    const baseLabel = bitmapBaseLabelForKey(s.results[i].bitmapBase);
+    const sp     = baseLabel.slice(0, 16).padEnd(16);
     const eye    = `e:${b.eye}`;
     const hat    = `h:${b.hat.slice(0, 6).padEnd(6)}`;
     const row    = `  ${clr}${ra}${N} ${sp} ${GR}${eye} ${hat}${N} ${shiny}`;
@@ -245,7 +291,7 @@ function namingPane(s: State): string[] {
   const b   = s.pendingResult?.bones;
   const clr = b ? (RARITY_CLR[b.rarity] ?? "") : "";
   const lines: string[] = [];
-  lines.push(`${B}  Name this buddy${N}`);
+  lines.push(`${B}  Name this pet${N}`);
   if (b) lines.push(`  ${clr}${b.rarity} ${b.species}${N}`);
   lines.push(GR + "  " + "─".repeat(LEFT_W - 2) + N);
   lines.push(`  ${B}Name:${N} ${s.nameInput}${YL}▌${N}`);
@@ -258,12 +304,15 @@ function previewPane(s: State): string[] {
 
   if (s.mode === "saved") {
     c = s.savedSlots[s.savedCursor]?.companion ?? null;
+  } else if (s.mode === "base") {
+    c = loadCompanionSlot(s.activeSlot) ?? s.savedSlots.find((entry) => entry.slot === s.activeSlot)?.companion ?? null;
   } else if (s.mode === "results") {
     const r = s.results[s.resultCursor];
     if (r) c = {
       bones: r.bones, name: "???",
       personality: generatePersonality(r.bones, r.userId),
       hatchedAt: Date.now(), userId: r.userId,
+      bitmapBase: r.bitmapBase,
     };
   } else if (s.mode === "naming" && s.pendingResult) {
     const r = s.pendingResult;
@@ -271,14 +320,18 @@ function previewPane(s: State): string[] {
       bones: r.bones, name: s.nameInput || "???",
       personality: generatePersonality(r.bones, r.userId),
       hatchedAt: Date.now(), userId: r.userId,
+      bitmapBase: r.bitmapBase,
     };
   }
 
   if (!c) return [`  ${GR}no preview${N}`];
   // Calculate available width for the right pane (total cols - left pane - separator)
   const cols = Math.max(80, process.stdout.columns || 80);
-  const rightW = cols - LEFT_W - 3;
-  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, rightW).split("\n");
+  const rightW = rightPaneWidth(cols);
+  const cardW = previewCardWidth(cols);
+  return renderCompanionCard(c.bones, c.name, c.personality, undefined, 0, cardW, c.bitmapBase)
+    .split("\n")
+    .map((line) => fitAnsi(line, rightW));
 }
 
 // ─── Screen render ────────────────────────────────────────────────────────────
@@ -288,6 +341,7 @@ function drawScreen(s: State): void {
   const rows = Math.max(20, process.stdout.rows    || 24);
 
   const leftLines  = s.mode === "saved"      ? savedPane(s)
+                   : s.mode === "base"       ? basePane(s)
                    : s.mode === "criteria"   ? criteriaPane(s)
                    : s.mode === "searching"  ? searchingPane(s)
                    : s.mode === "results"    ? resultsPane(s)
@@ -298,20 +352,21 @@ function drawScreen(s: State): void {
   let out = "\x1b[2J\x1b[H"; // clear + home
 
   // Title bar
-  const title    = ` claude-buddy pick `;
+  const title    = ` claude-punk pick `;
   const fill     = "─".repeat(Math.max(0, cols - title.length - 2));
   out += `${CY}─${B}${title}${N}${CY}${fill}─${N}\n`;
 
   // Content rows
   for (let i = 0; i < contentH; i++) {
     const l = rpad(leftLines[i] ?? "", LEFT_W);
-    const r = rightLines[i] ?? "";
+    const r = fitAnsi(rightLines[i] ?? "", rightPaneWidth(cols));
     out += l + GR + "│" + N + " " + r + "\n";
   }
 
   // Footer — mode-specific help
   const helpText =
-    s.mode === "saved"     ? "↑↓ navigate  enter summon  r random  s search  q quit" :
+    s.mode === "saved"     ? "↑↓ navigate  enter summon  b base  r random  s search  q quit" :
+    s.mode === "base"      ? "↑↓ navigate BASE  enter apply visual base  esc back  q quit" :
     s.mode === "criteria"  ? "↑↓ field  ←→ value  enter search  esc back" :
     s.mode === "searching" ? "any key to stop and show results so far" :
     s.mode === "results"   ? "↑↓ navigate  enter name+save  esc back  q quit" :
@@ -334,7 +389,7 @@ function avgStat(bones: BuddyBones): number {
 }
 
 async function runSearch(s: State): Promise<void> {
-  const wantSp    = SP_OPTS[s.ci[0]]  !== "any" ? SP_OPTS[s.ci[0]]  as Species  : null;
+  const wantBase  = BASE_OPTS[s.ci[0]] !== "any" ? BASE_OPTS[s.ci[0]] : null;
   const wantRa    = RA_OPTS[s.ci[1]]  !== "any" ? RA_OPTS[s.ci[1]]  as Rarity   : null;
   const wantShiny = SH_OPTS[s.ci[2]] === "yes"  ? true
                   : SH_OPTS[s.ci[2]] === "no"   ? false : null;
@@ -374,7 +429,6 @@ async function runSearch(s: State): Promise<void> {
     const userId = randomBytes(16).toString("hex");
     const bones  = generateBones(userId);
 
-    if (wantSp    !== null && bones.species !== wantSp)              continue;
     if (wantRa    !== null && bones.rarity  !== wantRa)              continue;
     if (wantShiny !== null && bones.shiny   !== wantShiny)           continue;
     if (wantPeak  !== null && bones.peak    !== wantPeak)            continue;
@@ -388,7 +442,7 @@ async function runSearch(s: State): Promise<void> {
     if (minWIS    !== null && bones.stats.WISDOM    < minWIS)        continue;
     if (minSNK    !== null && bones.stats.SNARK     < minSNK)        continue;
 
-    results.push({ userId, bones });
+    results.push({ userId, bones, bitmapBase: wantBase ?? pickBitmapBaseForSeed(`pick-result:${userId}`) });
   }
 
   s.searching    = false;
@@ -402,6 +456,21 @@ async function runSearch(s: State): Promise<void> {
 // ─── Key handlers ─────────────────────────────────────────────────────────────
 
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
+
+function applySelectedBase(s: State): boolean {
+  const base = BITMAP_BASES[s.baseCursor];
+  if (!base) return false;
+  const active = loadCompanionSlot(s.activeSlot) ?? s.savedSlots.find((entry) => entry.slot === s.activeSlot)?.companion;
+  if (!active) return false;
+  active.bitmapBase = base.key;
+  saveActiveSlot(s.activeSlot);
+  // saveCompanion updates the active slot, so make the selected saved slot active first.
+  saveCompanion(active);
+  writeStatusState(active, `*base changed to ${base.displayName}*`);
+  s.savedSlots = listCompanionSlots();
+  s.message = `✓ ${active.name}'s BitmapPunks BASE set to ${base.key}; other pets unchanged`;
+  return true;
+}
 
 /** Returns true if the TUI should exit. */
 function onKey(key: string, s: State): boolean {
@@ -425,6 +494,7 @@ function onKey(key: string, s: State): boolean {
           bones: r.bones, name,
           personality: generatePersonality(r.bones, r.userId),
           hatchedAt: Date.now(), userId: r.userId,
+          bitmapBase: r.bitmapBase ?? pickBitmapBaseForSeed(`pick:${r.userId}:${name}`),
         };
         saveCompanionSlot(companion, slot);
         saveActiveSlot(slot);
@@ -441,6 +511,7 @@ function onKey(key: string, s: State): boolean {
 
     case "saved": {
       if (key === "q")                          return true;
+      if (key === "b")                          { s.baseCursor = currentBitmapBaseIndex(); s.mode = "base"; break; }
       if (key === "s")                          { s.mode = "criteria"; break; }
       if (key === "\x1b[A" || key === "k")      s.savedCursor = clamp(s.savedCursor - 1, 0, s.savedSlots.length - 1);
       else if (key === "\x1b[B" || key === "j") s.savedCursor = clamp(s.savedCursor + 1, 0, s.savedSlots.length - 1);
@@ -462,6 +533,17 @@ function onKey(key: string, s: State): boolean {
           s.message = `✓ ${entry.companion.name} summoned!`;
           return true;
         }
+      }
+      break;
+    }
+
+    case "base": {
+      if (key === "q")                          return true;
+      if (key === "\x1b")                       { s.mode = "saved"; break; }
+      if (key === "\x1b[A" || key === "k")      s.baseCursor = clamp(s.baseCursor - 1, 0, BITMAP_BASES.length - 1);
+      else if (key === "\x1b[B" || key === "j") s.baseCursor = clamp(s.baseCursor + 1, 0, BITMAP_BASES.length - 1);
+      else if (key === "\r" || key === "\n") {
+        if (applySelectedBase(s)) return true;
       }
       break;
     }
@@ -552,4 +634,8 @@ async function main(): Promise<void> {
   process.exit(0);
 }
 
-main();
+export const __test = { fitAnsi, rpad, LEFT_W, PREVIEW_CARD_MAX_W, previewCardWidth, rightPaneWidth };
+
+if (import.meta.main) {
+  main();
+}

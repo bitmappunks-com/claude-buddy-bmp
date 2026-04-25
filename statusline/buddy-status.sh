@@ -38,11 +38,35 @@ ACHIEVEMENT=$(jq -r '.achievement // ""' "$STATE" 2>/dev/null)
 
 cat > /dev/null  # drain stdin
 
+# ─── Render-mode detection (per terminal) ──────────────────────────────────
+# status.json carries both halfblock and fullcell pre-rendered frames. Each
+# shell invocation picks the variant matching its own $TERM_PROGRAM, so
+# multiple terminals sharing one status.json each render correctly.
+if [ -n "$BUDDY_AVATAR_RENDER" ]; then
+    RENDER_MODE="$BUDDY_AVATAR_RENDER"
+else
+    TP=$(printf '%s' "${TERM_PROGRAM:-}" | tr '[:upper:]' '[:lower:]')
+    TE=$(printf '%s' "${TERM:-}" | tr '[:upper:]' '[:lower:]')
+    case "$TP" in
+        iterm.app|wezterm|ghostty|alacritty)
+            RENDER_MODE="halfblock" ;;
+        *)
+            case "$TE" in
+                *kitty*|*alacritty*) RENDER_MODE="halfblock" ;;
+                *)                   RENDER_MODE="fullcell"  ;;
+            esac
+            ;;
+    esac
+fi
+
+FRAME_FIELD=".framesFullcell"
+[ "$RENDER_MODE" = "halfblock" ] && FRAME_FIELD=".framesHalfblock"
+
 # ─── Animation: pick current frame from server-rendered frames ──────────────
 NOW=${BUDDY_FAKE_NOW:-$(date +%s)}
-FRAME_BODY=$(jq -r --argjson now "$NOW" '
+FRAME_BODY=$(jq -r --argjson now "$NOW" --arg field "$FRAME_FIELD" '
     .frameSequence[$now % (.frameSequence | length)] as $idx
-    | .frames[$idx] // ""
+    | (getpath($field | ltrimstr(".") | split(".")) // .frames)[$idx] // ""
 ' "$STATE" 2>/dev/null)
 
 # Fallback when status.json lacks .frames — e.g. server/bash version skew
@@ -53,9 +77,9 @@ if [ -z "$FRAME_BODY" ]; then
 fi
 
 ART_LINES=()
-while IFS= read -r line; do
+while IFS= read -r line || [ -n "$line" ]; do
     ART_LINES+=("$line")
-done <<< "$FRAME_BODY"
+done < <(printf '%s\n' "$FRAME_BODY")
 
 # ─── Rarity color (pC4 = dark theme, the default) ────────────────────────────
 NC=$'\033[0m'
@@ -172,11 +196,18 @@ fi
 
 # ─── Build all art lines ──────────────────────────────────────────────────────
 # ART_LINES comes from the pre-rendered frame (already includes hat + blink).
-# Center the name under the art. Frames are 12 cols wide (see server/art.ts),
-# so the geometric center sits at col 6.
-NAME_LEN=${#NAME}
-ART_CENTER=6
-NAME_PAD=$(( ART_CENTER - NAME_LEN / 2 ))
+# The implanted BitmapPunks avatar is much wider than the original ASCII buddy,
+# so derive the visual width from the current frame instead of hardcoding 12 cols.
+ART_W=0
+for line in "${ART_LINES[@]}"; do
+    plain=$(printf '%s' "$line" | perl -pe 's/\e\[[0-9;]*m//g')
+    lw=${#plain}
+    [ "$lw" -gt "$ART_W" ] && ART_W=$lw
+done
+[ "$ART_W" -le 0 ] && ART_W=14
+NAME_W=${#NAME}
+ART_CENTER=$(( ART_W / 2 ))
+NAME_PAD=$(( ART_CENTER - NAME_W / 2 ))
 [ "$NAME_PAD" -lt 0 ] && NAME_PAD=0
 NAME_LINE="$(printf '%*s%s' "$NAME_PAD" '' "$NAME")"
 
@@ -196,7 +227,6 @@ for line in "${ART_LINES[@]}"; do
 done
 ALL_LINES+=("$NAME_LINE"); ALL_COLORS+=("$DIM")
 
-ART_W=14
 ART_COUNT=${#ALL_LINES[@]}
 
 # ─── Speech bubble (left of art, word-wrapped) ──────────────────────────────

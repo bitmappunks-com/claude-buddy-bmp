@@ -19,6 +19,7 @@ import {
   hashString,
   mulberry32,
   generateBones,
+  generatePersonality,
   renderFace,
   renderCompact,
   type BuddyBones,
@@ -289,21 +290,38 @@ describe("generateBones", () => {
     expect(customA).toEqual(customB);
     expect(customA).not.toEqual(defaultSalt);
   });
+  test("generated personality describes a companion, not the legacy animal species", () => {
+    const bones: BuddyBones = {
+      rarity: "legendary",
+      species: "ghost",
+      eye: "◉",
+      hat: "none",
+      shiny: false,
+      stats: { DEBUGGING: 50, PATIENCE: 50, CHAOS: 50, WISDOM: 50, SNARK: 50 },
+      peak: "DEBUGGING",
+      dump: "PATIENCE",
+    };
+
+    const personality = generatePersonality(bones, "abcdef0123456789");
+
+    expect(personality).toContain("legendary companion");
+    expect(personality).not.toContain("legendary ghost");
+  });
 });
 
 // ─── renderFace ────────────────────────────────────────────────────────────
 
 describe("renderFace", () => {
-  test("substitutes {E} with the eye glyph", () => {
-    expect(renderFace("turtle", "·")).toBe("[·_·]");
-    expect(renderFace("cat", "×")).toBe("=×ω×=");
+  test("returns the generic implanted bitmap marker using the eye glyph", () => {
+    expect(renderFace("turtle", "·")).toBe("▣·▣");
+    expect(renderFace("cat", "×")).toBe("▣×▣");
   });
 
-  test("uses the right template per species", () => {
+  test("uses the same marker regardless of species", () => {
     const eye = "·";
-    expect(renderFace("duck", eye)).toBe("(·>");
-    expect(renderFace("blob", eye)).toBe("(··)");
-    expect(renderFace("robot", eye)).toBe("[··]");
+    expect(renderFace("duck", eye)).toBe("▣·▣");
+    expect(renderFace("blob", eye)).toBe("▣·▣");
+    expect(renderFace("robot", eye)).toBe("▣·▣");
   });
 
   test("never leaves a literal {E} in the output", () => {
@@ -339,7 +357,7 @@ describe("renderCompact", () => {
   test("includes the buddy name and face", () => {
     const out = renderCompact(bones, "Sesame");
     expect(out).toContain("Sesame");
-    expect(out).toContain("[·_·]");
+    expect(out).toContain("▣·▣");
   });
 
   test("appends the reaction bubble when provided", () => {
