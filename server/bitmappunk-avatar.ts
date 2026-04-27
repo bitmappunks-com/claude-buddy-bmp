@@ -570,7 +570,7 @@ export function detectRenderMode(env: NodeJS.ProcessEnv = process.env): RenderMo
   if (forced === "halfblock" || forced === "fullcell") return forced;
 
   const termProgram = (env.TERM_PROGRAM ?? "").toLowerCase();
-  if (["iterm.app", "wezterm", "ghostty", "alacritty"].includes(termProgram)) {
+  if (["iterm.app", "wezterm", "kaku", "ghostty", "alacritty"].includes(termProgram)) {
     return "halfblock";
   }
 

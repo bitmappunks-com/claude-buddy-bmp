@@ -6,8 +6,9 @@
 
 import { describe, test, expect, beforeEach } from "bun:test";
 import { mkdtempSync, writeFileSync, readFileSync } from "fs";
-import { join } from "path";
+import { join, dirname } from "path";
 import { tmpdir } from "os";
+import { fileURLToPath } from "url";
 import { setBuddyStatusLine, unsetBuddyStatusLine } from "./state.ts";
 
 describe("buddy statusline settings patch", () => {
@@ -82,5 +83,12 @@ describe("buddy statusline settings patch", () => {
     const result = JSON.parse(readFileSync(settingsPath, "utf8"));
     expect(result.statusLine.command).not.toContain("\\");
     expect(result.statusLine.command).toContain("/");
+  });
+
+  test("statusline script defaults Kaku to halfblock frames", () => {
+    const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+    const script = readFileSync(join(repoRoot, "statusline", "buddy-status.sh"), "utf8");
+    expect(script).toContain("iterm.app|wezterm|kaku|ghostty|alacritty)");
+    expect(script).toContain('[ "$RENDER_MODE" = "halfblock" ] && FRAME_FIELD=".framesHalfblock"');
   });
 });

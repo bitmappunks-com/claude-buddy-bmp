@@ -48,7 +48,7 @@ else
     TP=$(printf '%s' "${TERM_PROGRAM:-}" | tr '[:upper:]' '[:lower:]')
     TE=$(printf '%s' "${TERM:-}" | tr '[:upper:]' '[:lower:]')
     case "$TP" in
-        iterm.app|wezterm|ghostty|alacritty)
+        iterm.app|wezterm|kaku|ghostty|alacritty)
             RENDER_MODE="halfblock" ;;
         *)
             case "$TE" in

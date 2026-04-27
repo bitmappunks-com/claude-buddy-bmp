@@ -10,6 +10,7 @@ import {
   listBitmapBaseTraits,
   listBitmapItems,
   loadBitmapBaseTrait,
+  detectRenderMode,
   resolveBitmapItemSelection,
 } from "./bitmappunk-avatar.ts";
 
@@ -48,6 +49,19 @@ function expectOnlyCompleteActionRuns(sequence: number[]): void {
     expect(isBlink || isLook || isItem).toBe(true);
   }
 }
+
+describe("terminal render mode detection", () => {
+  test("defaults Kaku to halfblock rendering", () => {
+    expect(detectRenderMode({ TERM_PROGRAM: "Kaku", TERM: "xterm-256color" } as NodeJS.ProcessEnv)).toBe("halfblock");
+    expect(detectRenderMode({ TERM_PROGRAM: "kaku", TERM: "xterm-256color" } as NodeJS.ProcessEnv)).toBe("halfblock");
+  });
+
+  test("lets explicit render override win over terminal detection", () => {
+    expect(
+      detectRenderMode({ BUDDY_AVATAR_RENDER: "fullcell", TERM_PROGRAM: "Kaku" } as NodeJS.ProcessEnv),
+    ).toBe("fullcell");
+  });
+});
 
 describe("vendored bmp-gif base traits", () => {
   test("exports generic default-frame names instead of hello-specific constants", () => {
